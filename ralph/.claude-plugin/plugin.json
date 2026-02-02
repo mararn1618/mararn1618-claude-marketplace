@@ -1,0 +1,9 @@
+{
+  "name": "ralph",
+  "description": "RALPH v2 - Single /ralph command that guides you from project init through autonomous execution. Detects state, routes to the right phase.",
+  "version": "0.2.0",
+  "author": {
+    "name": "mararn1618"
+  },
+  "repository": "https://github.com/mararn1618/_mararn1618-claude-marketplace"
+}

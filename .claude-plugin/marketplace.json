@@ -1,0 +1,14 @@
+{
+  "name": "mararn1618-claude-marketplace",
+  "owner": {
+    "name": "mararn1618"
+  },
+  "plugins": [
+    {
+      "name": "ralph",
+      "source": "./ralph",
+      "description": "RALPH v2 - Single /ralph command for autonomous coding loops with guided planning",
+      "version": "0.2.0"
+    }
+  ]
+}
