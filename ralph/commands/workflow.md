@@ -36,7 +36,7 @@ If the user's message contains "redo research", "redo context", "redo plan", or 
    RALPH is fully set up for this project.
 
    To start the autonomous loop:
-     ./.ralph/loop.sh
+     ./loop.sh
 
    To redo a phase, say: "redo research", "redo context", "redo plan", or "redo run"
    ```
@@ -58,7 +58,7 @@ If the user's message contains "redo research", "redo context", "redo plan", or 
 
 3. Make `loop.sh` executable:
    ```bash
-   chmod +x .ralph/loop.sh
+   chmod +x loop.sh
    ```
 
 4. Check if `CLAUDE.md` exists in the project root. If it does, append the RALPH section to it. If not, create it with the RALPH section.
@@ -75,14 +75,16 @@ If the user's message contains "redo research", "redo context", "redo plan", or 
    - `context.md` — Background knowledge for the agent
    - `plan.md` — Checkboxed atomic task list
    - `agent-instructions.md` — Rules for the autonomous agent
-   - `loop.sh` — Bash loop script
    - `progress.md` — Append-only completion log
+
+   **Root files:**
+   - `loop.sh` — Bash loop script (project root)
 
    **Communication folders:**
    - `to-human/` — AI places files here when it needs human input (loop blocks)
    - `to-ai/` — Human drops files here for the AI to process next iteration
 
-   **To run:** `./.ralph/loop.sh`
+   **To run:** `./loop.sh`
    ````
 
 5. After creating everything, respond:
@@ -94,8 +96,9 @@ If the user's message contains "redo research", "redo context", "redo plan", or 
      - context.md (template)
      - plan.md (template)
      - agent-instructions.md (template)
-     - loop.sh (executable)
      - progress.md (empty)
+   Created in project root:
+     - loop.sh (executable)
      - Communication folders: to-human/, to-ai/, originals/, done/
      - Context folders: context/summaries/, context/refs/
      - Updated CLAUDE.md with RALPH section
@@ -357,7 +360,7 @@ Create `.ralph/summary.md`:
 
 ### Template: loop.sh
 
-Write this to `.ralph/loop.sh`:
+Write this to `./loop.sh` (project root):
 
 ````bash
 #!/bin/bash
@@ -1163,7 +1166,7 @@ Which CLI do you want RALPH to use?
 [If Codex: Do you need network access? This changes the sandbox flags.]
 ```
 
-Update the `CLI=` variable in `.ralph/loop.sh` based on user choice. If Codex with network access, also change `--full-auto` to `--dangerously-bypass-approvals-and-sandbox` in loop.sh.
+Update the `CLI=` variable in `loop.sh` based on user choice. If Codex with network access, also change `--full-auto` to `--dangerously-bypass-approvals-and-sandbox` in loop.sh.
 
 #### Step 5: Launch Instructions
 
@@ -1179,7 +1182,7 @@ RALPH is ready!
 
 **To start the autonomous loop:**
 
-  ./.ralph/loop.sh
+  ./loop.sh
 
 **Before running:**
 1. Verify CLI works: `claude -p "Say hello"` (or `codex exec "Say hello"`)
@@ -1192,5 +1195,5 @@ RALPH is ready!
 - Blocked: check `.ralph/to-human/`
 
 **To stop:** Ctrl+C
-**To resume:** Run `./.ralph/loop.sh` again (picks up from first unchecked task)
+**To resume:** Run `./loop.sh` again (picks up from first unchecked task)
 ```
