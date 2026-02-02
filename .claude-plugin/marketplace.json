@@ -8,7 +8,7 @@
       "name": "ralph",
       "source": "./ralph",
       "description": "RALPH v2 - Single /ralph command for autonomous coding loops with guided planning",
-      "version": "0.2.0"
+      "version": "0.3.0"
     }
   ]
 }
