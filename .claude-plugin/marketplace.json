@@ -9,6 +9,12 @@
       "source": "./ralph",
       "description": "RALPH v2 - Single /ralph command for autonomous coding loops with guided planning",
       "version": "0.3.0"
+    },
+    {
+      "name": "marp",
+      "source": "./marp",
+      "description": "Create Marp presentations from markdown",
+      "version": "0.1.0"
     }
   ]
 }
