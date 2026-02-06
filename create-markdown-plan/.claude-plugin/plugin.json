@@ -1,0 +1,9 @@
+{
+  "name": "create-markdown-plan",
+  "description": "Create structured Markdown project plans with phases, tasks, ownership, and acceptance criteria.",
+  "version": "0.1.0",
+  "author": {
+    "name": "mararn1618"
+  },
+  "repository": "https://github.com/mararn1618/mararn1618-claude-marketplace"
+}
