@@ -1,0 +1,9 @@
+{
+  "name": "telegram-notify",
+  "description": "Send notification messages to yourself via Telegram Bot API.",
+  "version": "0.1.0",
+  "author": {
+    "name": "mararn1618"
+  },
+  "repository": "https://github.com/mararn1618/mararn1618-claude-marketplace"
+}
