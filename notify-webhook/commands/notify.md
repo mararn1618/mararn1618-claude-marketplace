@@ -1,5 +1,6 @@
 ---
 description: "Send a notification via a PHP relay webhook to Teams, Telegram, Slack, Discord, ntfy, or Email. Use when the user asks to be notified, mentions a specific channel, or invokes /notify-webhook:notify. Also handles setup with /notify-webhook:notify setup."
+allowed-tools: Bash(source ~/.claude/notify-webhook.env*), Bash(curl *)
 ---
 
 # notify-webhook
