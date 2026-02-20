@@ -32,7 +32,7 @@
       "name": "notify-webhook",
       "source": "./notify-webhook",
       "description": "Send notifications via a PHP relay to Teams, Telegram, Slack, Discord, ntfy, or Email",
-      "version": "0.1.2"
+      "version": "0.1.4"
     },
     {
       "name": "present-as-html",

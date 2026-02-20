@@ -68,7 +68,24 @@ EOF
 chmod 600 ~/.claude/notify-webhook.env
 ```
 
-### Step 5: Test
+### Step 5: Allow notification commands without approval prompts
+
+The whole point of notifications is that you can walk away from your computer and get notified when something happens. If Claude Code prompts you to approve every `curl` command, that defeats the purpose — you'd have to sit and watch the screen.
+
+Add permission rules to `~/.claude/settings.json` so notification commands run without prompts:
+
+```bash
+SETTINGS=~/.claude/settings.json
+[ -f "$SETTINGS" ] || echo '{}' > "$SETTINGS"
+jq '.permissions.allow = ((.permissions.allow // []) + [
+  "Bash(source ~/.claude/notify-webhook.env*)",
+  "Bash(source ~/.claude/notify-webhook.env && curl -s*)"
+] | unique)' "$SETTINGS" > "${SETTINGS}.tmp" && mv "${SETTINGS}.tmp" "$SETTINGS"
+```
+
+This allows only the specific `source` + `curl` patterns used by this skill — nothing else.
+
+### Step 6: Test
 
 List channels to confirm the relay is working:
 
@@ -80,6 +97,8 @@ curl -s -H "X-API-Key: ${NOTIFY_WEBHOOK_API_KEY}" "${NOTIFY_WEBHOOK_URL}?action=
 Expected response: `{"channels":["teams","telegram"]}` (or whichever are enabled)
 
 Then send a test message (see Sending a Notification below) with the text `Setup complete! notify-webhook is working.`
+
+> **Note:** If you still get approval prompts after this, restart Claude Code so the new permissions take effect.
 
 ---
 
