@@ -7,7 +7,7 @@
     {
       "name": "ralph",
       "source": "./ralph",
-      "description": "RALPH v2 - Single /ralph command for autonomous coding loops with guided planning",
+      "description": "RALPH v2 - Single /ralph command for autonomous coding loops with guided planning. Detects state, routes to the right phase.",
       "version": "0.3.0"
     },
     {
@@ -23,9 +23,15 @@
       "version": "0.1.0"
     },
     {
-      "name": "telegram-notify",
-      "source": "./telegram-notify",
+      "name": "notify-telegram",
+      "source": "./notify-telegram",
       "description": "Send one-way notification messages to yourself via Telegram Bot API",
+      "version": "0.1.0"
+    },
+    {
+      "name": "notify-webhook",
+      "source": "./notify-webhook",
+      "description": "Send notifications via a PHP relay to Teams, Telegram, Slack, Discord, ntfy, or Email",
       "version": "0.1.0"
     }
   ]

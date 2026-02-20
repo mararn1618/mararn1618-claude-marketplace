@@ -1,0 +1,10 @@
+{
+  "name": "notify-webhook",
+  "description": "Send notifications via a PHP relay to Teams, Telegram, Slack, Discord, ntfy, or Email",
+  "version": "0.1.0",
+  "commands": ["notify"],
+  "author": {
+    "name": "mararn1618"
+  },
+  "repository": "https://github.com/mararn1618/mararn1618-claude-marketplace"
+}

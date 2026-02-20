@@ -1,7 +1,8 @@
 {
-  "name": "telegram-notify",
-  "description": "Send notification messages to yourself via Telegram Bot API.",
+  "name": "notify-telegram",
+  "description": "Send one-way notification messages to yourself via Telegram Bot API",
   "version": "0.1.0",
+  "commands": ["notify"],
   "author": {
     "name": "mararn1618"
   },

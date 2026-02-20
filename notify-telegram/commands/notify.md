@@ -1,5 +1,5 @@
 ---
-description: "Send a notification message to the user via Telegram. Use when the user has asked to receive updates via Telegram, or when explicitly asked to send a Telegram message. Also use /telegram-notify:notify setup to configure credentials."
+description: "Send a notification message to the user via Telegram. Use when the user has asked to receive updates via Telegram, or when explicitly asked to send a Telegram message. Also use /notify-telegram:notify setup to configure credentials."
 ---
 
 # Telegram Notify
@@ -9,7 +9,7 @@ Send one-way notification messages to the user via the Telegram Bot API.
 ## When to Use This Skill
 
 - The user has explicitly asked to be notified via Telegram (e.g. "send me updates on Telegram", "notify me when done", "let me know on Telegram")
-- The user explicitly invokes `/telegram-notify:notify`
+- The user explicitly invokes `/notify-telegram:notify`
 - **NEVER auto-invoke in a new session** unless the user has asked for Telegram notifications in that session
 - When in doubt, ask: "Want me to send you a Telegram notification?"
 
@@ -73,7 +73,7 @@ After successful test, tell the user they can now ask for Telegram notifications
 source ~/.claude/telegram.env
 ```
 
-If the file doesn't exist, tell the user to run `/telegram-notify:notify setup` first.
+If the file doesn't exist, tell the user to run `/notify-telegram:notify setup` first.
 
 ### 2. Send via curl
 
