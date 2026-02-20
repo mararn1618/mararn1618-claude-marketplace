@@ -2,7 +2,6 @@
   "name": "marp-presentation",
   "description": "Create Marp presentations from markdown",
   "version": "0.1.1",
-  "commands": ["marp"],
   "author": {
     "name": "mararn1618"
   },

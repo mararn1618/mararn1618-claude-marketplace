@@ -2,7 +2,6 @@
   "name": "create-markdown-plan",
   "description": "Create structured Markdown project plans with phases, tasks, ownership, and acceptance criteria",
   "version": "0.1.0",
-  "commands": ["create-markdown-plan"],
   "author": {
     "name": "mararn1618"
   },

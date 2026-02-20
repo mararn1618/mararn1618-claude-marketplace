@@ -2,7 +2,6 @@
   "name": "ralph",
   "description": "RALPH v2 - Single /ralph command for autonomous coding loops with guided planning. Detects state, routes to the right phase.",
   "version": "0.3.0",
-  "commands": ["workflow"],
   "author": {
     "name": "mararn1618"
   },
