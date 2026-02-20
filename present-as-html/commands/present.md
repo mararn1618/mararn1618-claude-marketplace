@@ -1,10 +1,10 @@
 ---
-description: "Generate a beautiful, self-contained HTML document from analysis, report, or research content. Creates polished single-file HTML with sidebar navigation, Mermaid diagrams with fullscreen zoom, stats dashboards, styled tables, and more. Use when the user wants to present findings, create a readable report, visualize an analysis, or generate an HTML version of any document. Invoked via /present-as-html:present."
+description: "Generate a beautiful, self-contained HTML document from analysis, report, or research content. Creates polished single-file HTML with sidebar navigation, pre-rendered Mermaid diagrams (inline SVGs, no CDN dependency), fullscreen zoom, stats dashboards, styled tables, and more. Works on SharePoint, Teams, email, and offline. Use when the user wants to present findings, create a readable report, visualize an analysis, or generate an HTML version of any document. Invoked via /present-as-html:present."
 ---
 
 # present-as-html
 
-Generate beautiful, self-contained HTML documents from any content — analyses, reports, research findings, architecture overviews, evaluations. The output is a single `.html` file with no external dependencies (except Mermaid.js CDN for diagrams) that looks polished and is enjoyable to read.
+Generate beautiful, self-contained HTML documents from any content — analyses, reports, research findings, architecture overviews, evaluations. The output is a single `.html` file with no external dependencies that looks polished and is enjoyable to read.
 
 ---
 
@@ -28,9 +28,10 @@ A **single self-contained HTML file** with these features:
 - Grouped nav sections with uppercase labels
 - Footer with date and author
 
-### 2. Mermaid.js Diagrams
-- Loaded from CDN: `https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js`
-- Custom theme matching the document palette
+### 2. Mermaid.js Diagrams (Pre-rendered as Inline SVGs)
+- Diagrams are authored as Mermaid source in `<pre class="mermaid">` blocks, then pre-rendered to inline SVGs via `@mermaid-js/mermaid-cli` as a post-processing step (see Step 6)
+- No CDN or JavaScript dependency — diagrams work on SharePoint, Teams, Confluence, email, and offline
+- Custom themed with the document color palette
 - Each diagram in a styled container with rounded borders and shadow
 
 ### 3. Diagram Viewing: Panels + Fullscreen
@@ -668,6 +669,99 @@ Place the fullscreen overlay HTML **after** the closing `</div><!-- /appGrid -->
 </html>
 ```
 
+### Step 6: Pre-render Diagrams to Inline SVGs
+
+After writing the HTML file, **always** perform this post-processing step. It converts `<pre class="mermaid">` blocks into inline `<svg>` elements, removing all JavaScript and CDN dependencies. Without this step, diagrams display as raw text on any platform that sandboxes HTML (SharePoint, Teams, Confluence, email clients).
+
+#### 6a. Create a Mermaid theme config
+
+Write a temporary config file that matches the document's color palette:
+
+```bash
+cat > /tmp/mermaid-config.json << 'EOF'
+{
+  "theme": "base",
+  "themeVariables": {
+    "primaryColor": "#dbeafe",
+    "primaryTextColor": "#1e40af",
+    "primaryBorderColor": "#2563eb",
+    "lineColor": "#64748b",
+    "secondaryColor": "#dcfce7",
+    "tertiaryColor": "#f3e8ff",
+    "fontSize": "14px"
+  }
+}
+EOF
+```
+
+#### 6b. Render each diagram
+
+For each `<pre class="mermaid">` block in the HTML:
+
+1. Extract the Mermaid source text (everything between `<pre class="mermaid">` and `</pre>`)
+2. Write it to a temp file, e.g. `/tmp/diagram-0.mmd`
+3. Render to SVG:
+   ```bash
+   npx -y @mermaid-js/mermaid-cli -i /tmp/diagram-0.mmd -o /tmp/diagram-0.svg -b transparent -c /tmp/mermaid-config.json --quiet
+   ```
+4. Read the generated SVG file
+
+Repeat for each diagram (increment the index: `diagram-1.mmd`, `diagram-2.mmd`, etc.).
+
+**Note:** The first run of `npx @mermaid-js/mermaid-cli` downloads Chromium (~200 MB). This is a one-time cost — subsequent runs use the cached binary.
+
+#### 6c. Replace in the HTML file
+
+Use a Python script (or similar) to perform the replacement:
+
+```python
+import re
+
+with open('REPORT.html', 'r') as f:
+    html = f.read()
+
+# Find all <pre class="mermaid">...</pre> blocks
+pattern = r'<pre class="mermaid">\n.*?\n\s*</pre>'
+matches = list(re.finditer(pattern, html, re.DOTALL))
+
+# Replace from last to first (preserves character offsets)
+for i in range(len(matches) - 1, -1, -1):
+    with open(f'/tmp/diagram-{i}.svg', 'r') as f:
+        svg = f.read()
+    replacement = f'<div class="mermaid" style="display:flex;justify-content:center;">{svg}</div>'
+    html = html[:matches[i].start()] + replacement + html[matches[i].end():]
+
+# Remove Mermaid CDN script and initialize call
+html = html.replace('<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>\n', '')
+html = re.sub(r'<script>mermaid\.initialize\(\{.*?\}\);</script>\n', '', html)
+
+with open('REPORT.html', 'w') as f:
+    f.write(html)
+```
+
+#### 6d. Verify
+
+After replacement, confirm:
+- No remaining `cdn.jsdelivr` references in the HTML
+- No remaining `mermaid.initialize` references
+- The number of `<svg` tags matches the number of diagrams
+- Open the file locally in a browser — diagrams render without network requests
+- The expand/fullscreen buttons still work (the JS finds SVGs via `container.querySelector('svg')`)
+
+#### 6e. Fallback
+
+If `npx` is not available (no Node.js):
+- Keep the HTML as-is with the Mermaid CDN script (diagrams will render when opened locally in a browser)
+- Warn the user: "Diagrams require JavaScript to render. They will not display on SharePoint, Teams, or other platforms that sandbox HTML. Install Node.js to enable automatic pre-rendering."
+
+#### 6f. Cleanup
+
+Remove the temporary files:
+
+```bash
+rm -f /tmp/diagram-*.mmd /tmp/diagram-*.svg /tmp/mermaid-config.json
+```
+
 ---
 
 ## Component Reference
@@ -878,7 +972,7 @@ Use 3-4 tags at the top to quickly communicate:
 These are hard-won insights from building these documents:
 
 1. **Never use hand-drawn SVGs** for diagrams. They look bad and are unmaintainable. Always use Mermaid.
-2. **Mermaid CDN is fine** — no need to bundle it. The single CDN include (`mermaid@11`) works reliably.
+2. **Pre-render Mermaid to inline SVGs** — the CDN works for local viewing, but platforms like SharePoint, Teams, and email clients block all JavaScript. Step 6 converts diagrams to inline SVGs via `@mermaid-js/mermaid-cli`, making the file truly zero-dependency.
 3. **Scroll-spy makes the sidebar useful** — without it, the sidebar is just a list of links.
 4. **Fullscreen zoom is essential** for complex diagrams (ER diagrams, large hierarchies). Without it, users can't read the details.
 5. **The blurred backdrop** on the fullscreen overlay helps focus attention on the diagram.
@@ -895,7 +989,8 @@ These are hard-won insights from building these documents:
 
 ## Error Handling
 
-- If Mermaid fails to render (syntax error), the raw text will show inside the `<pre>` tag. Check Mermaid syntax.
+- If `npx @mermaid-js/mermaid-cli` fails on a specific diagram, check the Mermaid syntax in the corresponding `.mmd` file. Common issues: unescaped quotes in labels, invalid diagram type, mismatched brackets.
+- If the SVG count after pre-rendering doesn't match the diagram count, a diagram failed to render. Check the mmdc stderr output for the failing diagram index.
+- If `npx` is not available at all, the HTML falls back to CDN mode. Diagrams will work locally but not on SharePoint/Teams/email.
 - If the sidebar doesn't highlight, verify that `id` attributes on `<h2>`/`<h3>` elements match the `href` values in sidebar `<a>` tags.
-- If diagrams don't render at all, check that the Mermaid CDN script is loaded (requires internet on first load, then cached).
 - For very large documents, the scroll-spy may lag — this is acceptable and rarely noticeable.
