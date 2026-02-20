@@ -29,7 +29,7 @@ A **single self-contained HTML file** with these features:
 - Footer with date and author
 
 ### 2. Mermaid.js Diagrams (Pre-rendered as Inline SVGs)
-- Diagrams are authored as Mermaid source in `<pre class="mermaid">` blocks, then pre-rendered to inline SVGs via `@mermaid-js/mermaid-cli` as a post-processing step (see Step 6)
+- Diagrams are authored as Mermaid source, rendered to SVG via `@mermaid-js/mermaid-cli`, and embedded directly as inline `<svg>` elements (see Step 6)
 - No CDN or JavaScript dependency — diagrams work on SharePoint, Teams, Confluence, email, and offline
 - Custom themed with the document color palette
 - Each diagram in a styled container with rounded borders and shadow
@@ -62,9 +62,9 @@ A **single self-contained HTML file** with these features:
 
 ## How to Build the HTML
 
-Follow this exact structure. The complete CSS, Mermaid config, and JavaScript are provided below — use them as-is, then fill in the content sections.
+Follow this exact structure. The complete CSS and JavaScript are provided below — use them as-is, then fill in the content sections. Diagrams are pre-rendered to inline SVGs before writing the HTML (see Step 6).
 
-### Step 1: HTML Head — Mermaid + Styles
+### Step 1: HTML Head + Styles
 
 ```html
 <!DOCTYPE html>
@@ -73,8 +73,6 @@ Follow this exact structure. The complete CSS, Mermaid config, and JavaScript ar
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DOCUMENT_TITLE</title>
-<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
-<script>mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: { primaryColor: '#dbeafe', primaryTextColor: '#1e40af', primaryBorderColor: '#2563eb', lineColor: '#64748b', secondaryColor: '#dcfce7', tertiaryColor: '#f3e8ff', fontSize: '14px' }});</script>
 ```
 
 ### Step 2: CSS
@@ -671,7 +669,7 @@ Place the fullscreen overlay HTML **after** the closing `</div><!-- /appGrid -->
 
 ### Step 6: Pre-render Diagrams to Inline SVGs
 
-After writing the HTML file, **always** perform this post-processing step. It converts `<pre class="mermaid">` blocks into inline `<svg>` elements, removing all JavaScript and CDN dependencies. Without this step, diagrams display as raw text on any platform that sandboxes HTML (SharePoint, Teams, Confluence, email clients).
+**Before writing the HTML file**, render all Mermaid diagrams to SVG and embed them directly. This ensures the document has zero JavaScript or CDN dependencies — diagrams work on SharePoint, Teams, Confluence, email, and offline.
 
 #### 6a. Create a Mermaid theme config
 
@@ -696,65 +694,45 @@ EOF
 
 #### 6b. Render each diagram
 
-For each `<pre class="mermaid">` block in the HTML:
+For each diagram you plan to include:
 
-1. Extract the Mermaid source text (everything between `<pre class="mermaid">` and `</pre>`)
-2. Write it to a temp file, e.g. `/tmp/diagram-0.mmd`
-3. Render to SVG:
+1. Write the Mermaid source to a temp file (e.g. `/tmp/diagram-0.mmd`)
+2. Render to SVG:
    ```bash
    npx -y @mermaid-js/mermaid-cli -i /tmp/diagram-0.mmd -o /tmp/diagram-0.svg -b transparent -c /tmp/mermaid-config.json --quiet
    ```
-4. Read the generated SVG file
+3. Read the generated SVG file content
 
-Repeat for each diagram (increment the index: `diagram-1.mmd`, `diagram-2.mmd`, etc.).
+Repeat for each diagram (increment the index: `diagram-1.mmd`, `diagram-2.mmd`, etc.). These can be run in parallel since they're independent.
 
 **Note:** The first run of `npx @mermaid-js/mermaid-cli` downloads Chromium (~200 MB). This is a one-time cost — subsequent runs use the cached binary.
 
-#### 6c. Replace in the HTML file
+#### 6c. Embed in the HTML
 
-Use a Python script (or similar) to perform the replacement:
+When writing the HTML file (Steps 1–5), embed the rendered SVGs directly inside `.diagram-container` divs:
 
-```python
-import re
-
-with open('REPORT.html', 'r') as f:
-    html = f.read()
-
-# Find all <pre class="mermaid">...</pre> blocks
-pattern = r'<pre class="mermaid">\n.*?\n\s*</pre>'
-matches = list(re.finditer(pattern, html, re.DOTALL))
-
-# Replace from last to first (preserves character offsets)
-for i in range(len(matches) - 1, -1, -1):
-    with open(f'/tmp/diagram-{i}.svg', 'r') as f:
-        svg = f.read()
-    replacement = f'<div class="mermaid" style="display:flex;justify-content:center;">{svg}</div>'
-    html = html[:matches[i].start()] + replacement + html[matches[i].end():]
-
-# Remove Mermaid CDN script and initialize call
-html = html.replace('<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>\n', '')
-html = re.sub(r'<script>mermaid\.initialize\(\{.*?\}\);</script>\n', '', html)
-
-with open('REPORT.html', 'w') as f:
-    f.write(html)
+```html
+<div class="diagram-container">
+  <div class="mermaid" style="display:flex;justify-content:center;">
+    SVG_CONTENT_HERE
+  </div>
+</div>
 ```
 
-#### 6d. Verify
+Do NOT use `<pre class="mermaid">` in the final HTML. Do NOT include any Mermaid CDN `<script>` tags or `mermaid.initialize()` calls — they are not needed.
 
-After replacement, confirm:
-- No remaining `cdn.jsdelivr` references in the HTML
-- No remaining `mermaid.initialize` references
-- The number of `<svg` tags matches the number of diagrams
-- Open the file locally in a browser — diagrams render without network requests
-- The expand/fullscreen buttons still work (the JS finds SVGs via `container.querySelector('svg')`)
+#### 6d. Fallback
 
-#### 6e. Fallback
-
-If `npx` is not available (no Node.js):
-- Keep the HTML as-is with the Mermaid CDN script (diagrams will render when opened locally in a browser)
+If `npx` is not available (no Node.js), fall back to the CDN approach:
+- Add to the HTML `<head>`:
+  ```html
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: { primaryColor: '#dbeafe', primaryTextColor: '#1e40af', primaryBorderColor: '#2563eb', lineColor: '#64748b', secondaryColor: '#dcfce7', tertiaryColor: '#f3e8ff', fontSize: '14px' }});</script>
+  ```
+- Use `<pre class="mermaid">` blocks instead of inline SVGs
 - Warn the user: "Diagrams require JavaScript to render. They will not display on SharePoint, Teams, or other platforms that sandbox HTML. Install Node.js to enable automatic pre-rendering."
 
-#### 6f. Cleanup
+#### 6e. Cleanup
 
 Remove the temporary files:
 
@@ -825,19 +803,29 @@ Use inline for status indicators, categories, or labels.
 
 ### Mermaid Diagram
 
-Always wrap in a `.diagram-container`. The fullscreen button and click handler are auto-injected by the JavaScript.
+Always wrap in a `.diagram-container`. The expand button and popover are auto-injected by the JavaScript.
+
+Diagrams are pre-rendered to inline SVGs via Step 6. Write the Mermaid source to a `.mmd` temp file, render with `mmdc`, then embed the SVG output:
 
 ```html
 <div class="diagram-container">
-  <pre class="mermaid">
+  <div class="mermaid" style="display:flex;justify-content:center;">
+    <svg><!-- rendered SVG content from mmdc --></svg>
+  </div>
+</div>
+```
+
+The Mermaid source for the diagram above would be:
+
+```
 graph TD
     A["Node A"] --> B["Node B"]
     B --> C["Node C"]
     style A fill:#dbeafe,stroke:#2563eb,color:#1e40af
     style B fill:#dcfce7,stroke:#16a34a,color:#166534
-  </pre>
-</div>
 ```
+
+See the **Mermaid Diagram Guide** section below for syntax, diagram types, and styling.
 
 ### Diagram Panels (Right / Bottom)
 
