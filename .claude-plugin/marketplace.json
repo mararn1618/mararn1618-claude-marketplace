@@ -33,6 +33,12 @@
       "source": "./notify-webhook",
       "description": "Send notifications via a PHP relay to Teams, Telegram, Slack, Discord, ntfy, or Email",
       "version": "0.1.1"
+    },
+    {
+      "name": "present-as-html",
+      "source": "./present-as-html",
+      "description": "Generate beautiful, self-contained HTML documents with sidebar navigation, Mermaid diagrams, resizable panels, and fullscreen zoom from any analysis or report content",
+      "version": "0.2.0"
     }
   ]
 }

@@ -1,0 +1,9 @@
+{
+  "name": "present-as-html",
+  "description": "Generate beautiful, self-contained HTML documents with sidebar navigation, Mermaid diagrams, resizable panels, and fullscreen zoom from any analysis or report content",
+  "version": "0.2.0",
+  "author": {
+    "name": "mararn1618"
+  },
+  "repository": "https://github.com/mararn1618/mararn1618-claude-marketplace"
+}
