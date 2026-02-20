@@ -8,31 +8,31 @@
       "name": "ralph",
       "source": "./ralph",
       "description": "RALPH v2 - Single /ralph command for autonomous coding loops with guided planning. Detects state, routes to the right phase.",
-      "version": "0.3.0"
+      "version": "0.3.1"
     },
     {
       "name": "marp-presentation",
       "source": "./marp-presentation",
       "description": "Create Marp presentations from markdown",
-      "version": "0.1.1"
+      "version": "0.1.2"
     },
     {
       "name": "create-markdown-plan",
       "source": "./create-markdown-plan",
       "description": "Create structured Markdown project plans with phases, tasks, ownership, and acceptance criteria",
-      "version": "0.1.0"
+      "version": "0.1.1"
     },
     {
       "name": "notify-telegram",
       "source": "./notify-telegram",
       "description": "Send one-way notification messages to yourself via Telegram Bot API",
-      "version": "0.1.0"
+      "version": "0.1.1"
     },
     {
       "name": "notify-webhook",
       "source": "./notify-webhook",
       "description": "Send notifications via a PHP relay to Teams, Telegram, Slack, Discord, ntfy, or Email",
-      "version": "0.1.0"
+      "version": "0.1.1"
     }
   ]
 }
