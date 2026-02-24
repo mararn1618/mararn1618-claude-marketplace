@@ -7,7 +7,7 @@ This repo contains Claude Code plugins (skills).
 ```
 <plugin-name>/
   .claude-plugin/plugin.json   # Plugin metadata + version
-  commands/<command>.md         # Skill definitions
+  skills/<skill-name>/SKILL.md # Skill definitions
 .claude-plugin/marketplace.json # Registry of all plugins + versions
 ```
 

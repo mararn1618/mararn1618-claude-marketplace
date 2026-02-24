@@ -1,3 +1,7 @@
+---
+description: "Create Marp presentations from markdown"
+---
+
 # Marp Presentations Reference
 
 ## What is Marp?

@@ -1,7 +1,7 @@
 {
   "name": "present-as-html",
   "description": "Generate beautiful, self-contained HTML documents with sidebar navigation, pre-rendered Mermaid diagrams (inline SVGs), resizable panels, and fullscreen zoom. Works on SharePoint, Teams, email, and offline — zero external dependencies.",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "author": {
     "name": "mararn1618"
   },
