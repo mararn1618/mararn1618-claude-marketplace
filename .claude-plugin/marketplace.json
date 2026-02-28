@@ -39,6 +39,12 @@
       "source": "./present-as-html",
       "description": "Generate beautiful, self-contained HTML documents with sidebar navigation, Mermaid diagrams, resizable panels, and fullscreen zoom from any analysis or report content",
       "version": "0.4.0"
+    },
+    {
+      "name": "hevy-api",
+      "source": "./hevy-api",
+      "description": "Interact with the Hevy workout platform API via curl/bash. Covers auth setup, workouts, exercises, routines, and pagination.",
+      "version": "0.1.0"
     }
   ]
 }

@@ -1,0 +1,9 @@
+{
+  "name": "hevy-api",
+  "description": "Interact with the Hevy workout platform API via curl/bash. Covers auth setup, workouts, exercises, routines, and pagination.",
+  "version": "0.1.0",
+  "author": {
+    "name": "mararn1618"
+  },
+  "repository": "https://github.com/mararn1618/mararn1618-claude-marketplace"
+}
