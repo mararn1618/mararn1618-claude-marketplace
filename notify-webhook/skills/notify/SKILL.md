@@ -1,6 +1,6 @@
 ---
 description: "Send a notification via a PHP relay webhook to Teams, Telegram, Slack, Discord, ntfy, or Email. Use when the user asks to be notified, mentions a specific channel, or invokes /notify-webhook:notify. Also handles setup with /notify-webhook:notify setup."
-allowed-tools: Bash(source ~/.claude/notify-webhook.env*), Bash(curl *)
+allowed-tools: Bash(~/.claude/notify-webhook.sh *)
 ---
 
 # notify-webhook
@@ -18,13 +18,13 @@ Send one-way notification messages to yourself via a self-hosted PHP relay. The 
 
 ## Pre-authorized Execution
 
-All bash commands in this skill (`source`, `curl`) are **pre-authorized** by the user and must be executed immediately without asking for permission. The user's intent to send a notification was already expressed when they invoked this skill or asked to be notified. Asking again before running the curl command defeats the purpose and must never happen.
+All bash commands in this skill are **pre-authorized** by the user and must be executed immediately without asking for permission. The user's intent to send a notification was already expressed when they invoked this skill or asked to be notified. Asking again before running the command defeats the purpose and must never happen.
 
 ---
 
 ## Setup
 
-If `~/.claude/notify-webhook.env` does not exist, or the user says "setup" or "configure", guide them:
+If `~/.claude/notify-webhook.sh` does not exist, or the user says "setup" or "configure", guide them:
 
 ### Step 1: Deploy the PHP relay
 
@@ -68,49 +68,46 @@ EOF
 chmod 600 ~/.claude/notify-webhook.env
 ```
 
-### Step 5: Allow notification commands without approval prompts
+### Step 5: Install the notification script
 
-The whole point of notifications is that you can walk away from your computer and get notified when something happens. If Claude Code prompts you to approve every `curl` command, that defeats the purpose — you'd have to sit and watch the screen.
-
-Add permission rules to `~/.claude/settings.json` so notification commands run without prompts:
+Copy the shell script from this skill's directory to a fixed location:
 
 ```bash
-SETTINGS=~/.claude/settings.json
-[ -f "$SETTINGS" ] || echo '{}' > "$SETTINGS"
-jq '.permissions.allow = ((.permissions.allow // []) + [
-  "Bash(source ~/.claude/notify-webhook.env*)",
-  "Bash(source ~/.claude/notify-webhook.env && curl -s*)"
-] | unique)' "$SETTINGS" > "${SETTINGS}.tmp" && mv "${SETTINGS}.tmp" "$SETTINGS"
+cp "SKILL_BASE_DIR/notify.sh" ~/.claude/notify-webhook.sh
+chmod +x ~/.claude/notify-webhook.sh
 ```
 
-This allows only the specific `source` + `curl` patterns used by this skill — nothing else.
+Replace `SKILL_BASE_DIR` with this skill's base directory (shown at the top when the skill loads).
 
 ### Step 6: Test
 
 List channels to confirm the relay is working:
 
 ```bash
-source ~/.claude/notify-webhook.env
-curl -s -H "X-API-Key: ${NOTIFY_WEBHOOK_API_KEY}" "${NOTIFY_WEBHOOK_URL}?action=channels"
+~/.claude/notify-webhook.sh channels
 ```
 
 Expected response: `{"channels":["teams","telegram"]}` (or whichever are enabled)
 
-Then send a test message (see Sending a Notification below) with the text `Setup complete! notify-webhook is working.`
+Then send a test message:
 
-> **Note:** If you still get approval prompts after this, restart Claude Code so the new permissions take effect.
+```bash
+~/.claude/notify-webhook.sh send-all "Setup complete! notify-webhook is working."
+```
 
 ---
 
 ## Sending a Notification
 
-### 1. Load credentials
+### 1. Check the script exists
+
+If `~/.claude/notify-webhook.sh` does not exist, install it from this skill's base directory:
 
 ```bash
-source ~/.claude/notify-webhook.env
+cp "SKILL_BASE_DIR/notify.sh" ~/.claude/notify-webhook.sh && chmod +x ~/.claude/notify-webhook.sh
 ```
 
-If the file doesn't exist, tell the user to run `/notify-webhook:notify setup` first.
+Replace `SKILL_BASE_DIR` with this skill's base directory.
 
 ### 2. Determine the channel
 
@@ -120,8 +117,7 @@ If the file doesn't exist, tell the user to run `/notify-webhook:notify setup` f
 
 a. Fetch available channels:
 ```bash
-source ~/.claude/notify-webhook.env && \
-curl -s -H "X-API-Key: ${NOTIFY_WEBHOOK_API_KEY}" "${NOTIFY_WEBHOOK_URL}?action=channels"
+~/.claude/notify-webhook.sh channels
 ```
 
 b. Parse the `channels` array from the JSON response.
@@ -135,33 +131,14 @@ e. If **zero channels** — tell the user no channels are configured in config.p
 
 ### 3. Send the notification
 
+**To a specific channel:**
 ```bash
-source ~/.claude/notify-webhook.env && curl -s -X POST \
-  -H "X-API-Key: ${NOTIFY_WEBHOOK_API_KEY}" \
-  -H "Content-Type: application/json" \
-  -d "$(python3 -c "
-import json
-msg = '''MESSAGE_TEXT_HERE'''
-channel = 'CHANNEL_NAME_HERE'
-print(json.dumps({'channel': channel, 'message': msg}))
-")" \
-  "${NOTIFY_WEBHOOK_URL}"
+~/.claude/notify-webhook.sh send CHANNEL_NAME "MESSAGE_TEXT_HERE"
 ```
 
-Replace `MESSAGE_TEXT_HERE` with the actual message and `CHANNEL_NAME_HERE` with the chosen channel (e.g. `teams`, `telegram`, `slack`).
-
-To send to **all enabled channels at once**, omit the `channel` key:
-
+**To all enabled channels:**
 ```bash
-source ~/.claude/notify-webhook.env && curl -s -X POST \
-  -H "X-API-Key: ${NOTIFY_WEBHOOK_API_KEY}" \
-  -H "Content-Type: application/json" \
-  -d "$(python3 -c "
-import json
-msg = '''MESSAGE_TEXT_HERE'''
-print(json.dumps({'message': msg}))
-")" \
-  "${NOTIFY_WEBHOOK_URL}"
+~/.claude/notify-webhook.sh send-all "MESSAGE_TEXT_HERE"
 ```
 
 ### 4. Check the response
@@ -228,9 +205,10 @@ No blockers so far.
 
 ## Error Handling
 
-- If `~/.claude/notify-webhook.env` is missing: tell user to run setup
-- If `?action=channels` returns an empty array: tell user to enable channels in config.php
-- If curl fails or `success` is false: show the error from the response
+- If `~/.claude/notify-webhook.sh` is missing: install it from the skill's base directory
+- If `~/.claude/notify-webhook.env` is missing: tell user to run `/notify-webhook:notify setup`
+- If `channels` returns an empty array: tell user to enable channels in config.php
+- If the command fails or `success` is false: show the error from the response
 - If the named channel isn't in the available list: warn the user and offer available alternatives
 - Common errors:
   - `Unauthorized` — API key mismatch between env file and config.php
