@@ -191,6 +191,25 @@ const HTML_PAGE = `<!DOCTYPE html>
   .dash-card-body {
     padding: 14px; overflow-x: auto;
   }
+  .dash-card-body.light-bg {
+    background: #f6f8fa; border-radius: 0 0 var(--radius) var(--radius);
+  }
+  .dash-card-body.light-bg .markdown-container,
+  .dash-card-body.light-bg .html-container { color: #1f2328; }
+  .dash-card-body.light-bg .markdown-container code { background: rgba(0,0,0,0.08); color: #1f2328; }
+  .dash-card-body.light-bg .markdown-container pre { background: #e6e8eb; }
+  .bg-toggle {
+    width: 36px; height: 18px; border-radius: 9px; border: none; padding: 0;
+    background: var(--border); cursor: pointer; position: relative; transition: background 0.2s;
+    display: inline-flex; align-items: center;
+  }
+  .bg-toggle::after {
+    content: ''; position: absolute; left: 2px; top: 2px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--text-dim); transition: all 0.2s;
+  }
+  .bg-toggle.light { background: var(--accent); }
+  .bg-toggle.light::after { left: 20px; background: #fff; }
   .dash-card-body .mermaid-container svg { max-width: 100%; height: auto; }
   .dash-card-body .kroki-container img,
   .dash-card-body .kroki-container svg { max-width: 100%; height: auto; }
@@ -429,6 +448,7 @@ window.selectPage = async function(pageId) {
     const badgeClass = card.type === 'mermaid' ? 'mermaid' : card.type === 'kroki' ? 'kroki' : card.type;
     const badgeLabel = card.type === 'kroki' ? (card.krokiDiagramType || 'kroki') : card.type;
     cardEl.className = 'dash-card' + (card.size === 'full' ? ' full' : '');
+    const lightDefault = card.type === 'kroki' || card.type === 'svg';
     cardEl.innerHTML =
       '<div class="dash-card-header">'
       + '<div class="dash-card-header-left">'
@@ -436,10 +456,11 @@ window.selectPage = async function(pageId) {
       + (card.title ? '<span class="dash-card-title">' + escapeHtml(card.title) + '</span>' : '')
       + '</div>'
       + '<div class="dash-card-actions">'
+      + '<button class="bg-toggle' + (lightDefault ? ' light' : '') + '" onclick="toggleBg(\\'' + pageId + '\\',' + i + ')" title="Toggle light/dark background"></button>'
       + '<button onclick="expandCard(' + i + ')" title="Fullscreen">&#9974;</button>'
       + '<button onclick="copyCard(' + i + ')" title="Copy source">&#128203;</button>'
       + '</div></div>'
-      + '<div class="dash-card-body"><div class="render-target" id="rt-' + pageId + '-' + i + '"></div></div>';
+      + '<div class="dash-card-body' + (lightDefault ? ' light-bg' : '') + '"><div class="render-target" id="rt-' + pageId + '-' + i + '"></div></div>';
     dashboardEl.appendChild(cardEl);
   }
 
@@ -520,13 +541,24 @@ function escapeHtml(s) {
   return d.innerHTML;
 }
 
+window.toggleBg = function(pageId, cardIdx) {
+  const body = document.getElementById('rt-' + pageId + '-' + cardIdx)?.parentElement;
+  if (!body) return;
+  const isLight = body.classList.toggle('light-bg');
+  const card = body.parentElement;
+  const btn = card.querySelector('.bg-toggle');
+  if (btn) btn.classList.toggle('light', isLight);
+};
+
 window.expandCard = function(cardIdx) {
   const page = allPages.find(p => p.id === activePageId);
   if (!page) return;
   const targetId = 'rt-' + activePageId + '-' + cardIdx;
   const target = document.getElementById(targetId);
   if (target) {
+    const isLight = target.parentElement.classList.contains('light-bg');
     fsContentEl.innerHTML = target.innerHTML;
+    fsContentEl.style.background = isLight ? '#f6f8fa' : '';
     fullscreenEl.classList.add('active');
   }
 };

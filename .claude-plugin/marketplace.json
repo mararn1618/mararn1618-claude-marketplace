@@ -50,7 +50,7 @@
       "name": "claude-viz",
       "source": "./claude-viz",
       "description": "Live visualization side-panel for Claude Code. Push Mermaid diagrams, Kroki-rendered diagrams (GraphViz, PlantUML, C4, D2, DBML, etc.), HTML, and SVG to a browser tab in real-time as you chat.",
-      "version": "0.1.0"
+      "version": "0.2.0"
     }
   ]
 }
