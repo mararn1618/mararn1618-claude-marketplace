@@ -76,10 +76,11 @@ curl -s -X POST http://127.0.0.1:7891/api/pages \
         "content": "<div style=\"display:grid;grid-template-columns:1fr 1fr;gap:8px\"><div style=\"background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:12px;text-align:center\"><div style=\"font-size:24px;font-weight:700;color:#58a6ff\">3</div><div style=\"font-size:11px;color:#8b949e\">Services</div></div><div style=\"background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:12px;text-align:center\"><div style=\"font-size:24px;font-weight:700;color:#3fb950\">2</div><div style=\"font-size:11px;color:#8b949e\">Endpoints</div></div></div>"
       },
       {
-        "type": "mermaid",
+        "type": "kroki",
         "title": "Sequence Diagram",
         "size": "full",
-        "content": "sequenceDiagram\n    participant C as Client\n    participant A as API\n    participant D as Database\n    C->>A: POST /login\n    A->>D: SELECT user\n    D-->>A: user record\n    A-->>C: JWT token"
+        "content": "@startuml\nactor User\nparticipant \"Web App\" as WA\nparticipant \"Auth Service\" as Auth\ndatabase \"User DB\" as DB\nUser -> WA: Login(email, pass)\nWA -> Auth: Authenticate\nAuth -> DB: SELECT user\nDB --> Auth: record\nAuth --> WA: JWT\nWA --> User: Set-Cookie\n@enduml",
+        "kroki_diagram_type": "plantuml"
       }
     ]
   }'
@@ -151,22 +152,28 @@ curl -s -X POST http://127.0.0.1:7891/api/pages \
 
 ## Which Diagram Type to Use
 
-**Default to Mermaid** unless you need something specific:
+**Prefer Kroki** for richer, better-looking diagrams. Use Mermaid only for quick simple cases.
 
-| Need | Use | Type |
-|---|---|---|
-| Flowchart, decision tree | Mermaid `graph TD` / `flowchart` | `mermaid` |
-| Sequence diagram | Mermaid `sequenceDiagram` | `mermaid` |
-| ER diagram (quick) | Mermaid `erDiagram` | `mermaid` |
-| Class diagram | Mermaid `classDiagram` | `mermaid` |
-| State machine | Mermaid `stateDiagram-v2` | `mermaid` |
-| Gantt chart | Mermaid `gantt` | `mermaid` |
-| C4 architecture diagram | C4 PlantUML | `kroki` + `c4plantuml` |
-| Infrastructure / deployment | D2 | `kroki` + `d2` |
-| Database schema (detailed) | DBML | `kroki` + `dbml` |
-| Dependency / call graph | GraphViz DOT | `kroki` + `graphviz` |
-| Mind map | PlantUML `@startmindmap` | `kroki` + `plantuml` |
-| Data chart (bar, line, etc.) | Vega-Lite | `kroki` + `vegalite` |
+**Vary your diagram types** — do not always pick the same one. Match the diagram tool to the content.
+
+| Need | Best Choice | Type | Alternative |
+|---|---|---|---|
+| Architecture (C4 model) | C4 PlantUML | `kroki` + `c4plantuml` | `kroki` + `structurizr` |
+| Architecture (informal) | D2 | `kroki` + `d2` | `kroki` + `graphviz` |
+| Database schema / ER | DBML | `kroki` + `dbml` | Mermaid `erDiagram` |
+| Sequence diagram | PlantUML | `kroki` + `plantuml` | Mermaid `sequenceDiagram` |
+| Flowchart | D2 or GraphViz | `kroki` + `d2` / `graphviz` | Mermaid `flowchart` |
+| Class diagram | PlantUML | `kroki` + `plantuml` | Mermaid `classDiagram` |
+| Dependency / call graph | GraphViz DOT | `kroki` + `graphviz` | — |
+| Network topology | NwDiag or GraphViz | `kroki` + `nwdiag` / `graphviz` | — |
+| Mind map | PlantUML | `kroki` + `plantuml` | Mermaid `mindmap` |
+| State machine | PlantUML | `kroki` + `plantuml` | Mermaid `stateDiagram-v2` |
+| Data chart (bar, line, etc.) | Vega-Lite | `kroki` + `vegalite` | — |
+| Gantt chart | Mermaid `gantt` | `mermaid` | — |
+| ASCII art to diagram | SvgBob | `kroki` + `svgbob` | — |
+| Server rack layout | RackDiag | `kroki` + `rackdiag` | — |
+
+**When to use Mermaid:** Only for very simple diagrams where the quick client-side rendering is worth the simpler output. For anything complex or polished, use Kroki.
 
 For detailed syntax examples of each Kroki diagram type, read `SKILL_BASE_DIR/kroki-reference.md`.
 
