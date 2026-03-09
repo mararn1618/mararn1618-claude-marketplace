@@ -170,6 +170,15 @@ WA --> User: Set-Cookie
 }
 ```
 
+## Colors and Theming
+
+**CRITICAL: Kroki diagrams render on a LIGHT background in the viz panel.** Do not apply dark themes.
+
+- **PlantUML**: Do NOT add `skinparam backgroundColor` or dark theme overrides. Default PlantUML colors are designed for light backgrounds and look great.
+- **GraphViz**: Use light fill colors: `fillcolor=lightyellow`, `fillcolor=lightblue`, `fillcolor="#e8f4f8"`. Avoid dark fills.
+- **D2**: Default colors work well. No dark theming needed.
+- **DBML**: No color control — always renders well on light background.
+
 ## Limitations
 
 - **D2**: SVG output only (no PNG/PDF)

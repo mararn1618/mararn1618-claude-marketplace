@@ -518,6 +518,37 @@ function renderMarkdown(md) {
       const lines = block.split(/\\n/);
       return '<pre><code>' + escapeHtml(lines.slice(1, -1).join('\\n')) + '</code></pre>';
     }
+    // Tables (lines starting with |)
+    if (/^\\|/.test(block)) {
+      const rows = block.split(/\\n/).filter(r => r.trim());
+      if (rows.length < 2) return '<p>' + inlineFormat(block) + '</p>';
+      const isSep = function(r) { return /^\\|?[\\s\\-:]+([\\|][\\s\\-:]+)*\\|?$/.test(r.trim()); };
+      const sepIdx = rows.findIndex((r, i) => i > 0 && isSep(r));
+      const hasHeader = sepIdx === 1;
+      const parseCells = function(row) {
+        return row.replace(/^\\|/, '').replace(/\\|$/, '').split('\\|').map(c => c.trim());
+      };
+      let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;margin:4px 0;">';
+      if (hasHeader) {
+        const hCells = parseCells(rows[0]);
+        html += '<thead><tr>' + hCells.map(c =>
+          '<th style="padding:6px 10px;border-bottom:2px solid var(--border);text-align:left;font-weight:600;color:var(--text);">'
+          + inlineFormat(escapeHtml(c)) + '</th>'
+        ).join('') + '</tr></thead>';
+      }
+      html += '<tbody>';
+      const startIdx = hasHeader ? 2 : 0;
+      for (let ri = startIdx; ri < rows.length; ri++) {
+        if (isSep(rows[ri])) continue;
+        const cells = parseCells(rows[ri]);
+        html += '<tr>' + cells.map(c =>
+          '<td style="padding:5px 10px;border-bottom:1px solid var(--border);color:var(--text-muted);">'
+          + inlineFormat(escapeHtml(c)) + '</td>'
+        ).join('') + '</tr>';
+      }
+      html += '</tbody></table>';
+      return html;
+    }
     // Lists
     if (/^- /.test(block)) {
       const items = block.split(/\\n/).filter(l => l.startsWith('- '));

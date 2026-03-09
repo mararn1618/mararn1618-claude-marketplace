@@ -177,6 +177,36 @@ curl -s -X POST http://127.0.0.1:7891/api/pages \
 
 For detailed syntax examples of each Kroki diagram type, read `SKILL_BASE_DIR/kroki-reference.md`.
 
+## Important: Colors and Theming
+
+**Kroki diagrams (PlantUML, GraphViz, DBML, etc.) render on a LIGHT background by default.** The viz panel auto-sets a light background for Kroki and SVG cards. Therefore:
+
+- **Do NOT add dark theme `skinparam` overrides** to PlantUML diagrams (e.g., `skinparam backgroundColor #0d1117`). This will make the diagram unreadable — dark lines on a dark background.
+- **Use default PlantUML colors** — they are designed for light backgrounds and look great out of the box.
+- **For GraphViz**, use light fill colors like `fillcolor=lightyellow`, `fillcolor=lightblue`, `fillcolor=lightgreen` for nodes.
+- **For D2**, default colors work well on light backgrounds.
+- The user can toggle dark/light background per card using the toggle button in the card header.
+
+**Mermaid diagrams render on a DARK background** (the viz panel's native dark theme). Mermaid uses its built-in `dark` theme — no custom styling needed.
+
+## Important: Markdown Tables
+
+Markdown cards support pipe-delimited tables:
+
+```markdown
+| Column 1 | Column 2 | Column 3 |
+|---|---|---|
+| Cell A | Cell B | Cell C |
+| **Bold** | `code` | *italic* |
+```
+
+Tables must have:
+- A header row (first row)
+- A separator row with dashes (`|---|---|---|`)
+- One or more data rows
+
+**Do NOT embed tables in the middle of other markdown content** — the table must be the entire content of the block (separated by blank lines from surrounding text). If you need both text and a table, use separate cards (one `markdown` card for text, another `markdown` card for the table) or use an `html` card for full control.
+
 ## After Pushing
 
 Report back what you visualized:
