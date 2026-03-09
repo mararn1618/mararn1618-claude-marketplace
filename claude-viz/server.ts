@@ -211,6 +211,7 @@ const HTML_PAGE = `<!DOCTYPE html>
   .bg-toggle.light { background: var(--accent); }
   .bg-toggle.light::after { left: 20px; background: #fff; }
   .dash-card-body .mermaid-container svg { max-width: 100%; height: auto; }
+  .dash-card-body .kroki-container { max-height: 600px; overflow: auto; }
   .dash-card-body .kroki-container img,
   .dash-card-body .kroki-container svg { max-width: 100%; height: auto; }
   .dash-card-body .html-container { line-height: 1.5; font-size: 14px; }
