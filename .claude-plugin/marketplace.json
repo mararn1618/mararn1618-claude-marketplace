@@ -45,6 +45,12 @@
       "source": "./hevy-api",
       "description": "Interact with the Hevy workout platform API via curl/bash. Covers auth setup, workouts, exercises, routines, and pagination.",
       "version": "0.1.0"
+    },
+    {
+      "name": "claude-viz",
+      "source": "./claude-viz",
+      "description": "Live visualization side-panel for Claude Code. Push Mermaid diagrams, Kroki-rendered diagrams (GraphViz, PlantUML, C4, D2, DBML, etc.), HTML, and SVG to a browser tab in real-time as you chat.",
+      "version": "0.1.0"
     }
   ]
 }
