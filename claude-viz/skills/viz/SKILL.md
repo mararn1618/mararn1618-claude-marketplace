@@ -232,6 +232,20 @@ Tables must have:
 
 **Do NOT embed tables in the middle of other markdown content** — the table must be the entire content of the block (separated by blank lines from surrounding text). If you need both text and a table, use separate cards (one `markdown` card for text, another `markdown` card for the table) or use an `html` card for full control.
 
+## Diagram Interactivity
+
+All diagram cards (mermaid, kroki, svg) have built-in zoom and pan:
+
+- **Scroll wheel** to zoom in/out (anchored to cursor position)
+- **Click and drag** to pan around the diagram
+- Diagrams **auto-scale to fit** inside a 500px-tall card on load
+- **Fullscreen button** (in card header) opens a full-viewport overlay with:
+  - `+` / `−` / `1:1` zoom toolbar buttons
+  - Scroll-wheel zoom and drag-to-pan
+  - `Esc` to close
+
+Because diagrams auto-scale, the `size` choice (`full` vs `half`) is about **layout efficiency**, not about fitting content. A tall sequence diagram in a `full`-width card wastes horizontal space — put it in `half` so another card can sit beside it.
+
 ## After Pushing
 
 Report back what you visualized:
