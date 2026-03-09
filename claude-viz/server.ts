@@ -211,10 +211,19 @@ const HTML_PAGE = `<!DOCTYPE html>
   .bg-toggle.light { background: var(--accent); }
   .bg-toggle.light::after { left: 20px; background: #fff; }
   .dash-card-body .mermaid-container svg { max-width: 100%; height: auto; }
-  .dash-card-body .kroki-container { max-height: 600px; overflow: auto; }
   .dash-card-body .kroki-container img,
   .dash-card-body .kroki-container svg { max-width: 100%; height: auto; }
   .dash-card-body .html-container { line-height: 1.5; font-size: 14px; }
+
+  /* Diagram viewport (zoom/pan) */
+  .diagram-viewport { position: relative; height: 500px; overflow: hidden; cursor: grab; }
+  .diagram-viewport.grabbing { cursor: grabbing; }
+  .diagram-viewport .diagram-inner { transform-origin: 0 0; }
+  .diagram-viewport .diagram-inner svg { max-width: none; max-height: none; }
+  .diagram-hint {
+    position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
+    font-size: 10px; color: var(--text-dim); pointer-events: none; opacity: 0.7;
+  }
   .dash-card-body .markdown-container { line-height: 1.5; font-size: 14px; }
   .dash-card-body .markdown-container h1 { font-size: 1.4em; margin: 0 0 8px; }
   .dash-card-body .markdown-container h2 { font-size: 1.2em; margin: 12px 0 6px; color: var(--text); }
@@ -241,18 +250,29 @@ const HTML_PAGE = `<!DOCTYPE html>
   /* Fullscreen overlay */
   .fullscreen-overlay {
     display: none; position: fixed; inset: 0; z-index: 150;
-    background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); padding: 40px; overflow: auto;
+    background: rgba(0,0,0,0.85); backdrop-filter: blur(6px);
+    flex-direction: column; align-items: center; justify-content: center;
   }
-  .fullscreen-overlay.active { display: flex; align-items: center; justify-content: center; }
-  .fullscreen-overlay .fs-content {
-    max-width: 95vw; max-height: 95vh; overflow: auto;
-    background: var(--bg-card); border-radius: var(--radius); padding: 24px;
+  .fullscreen-overlay.active { display: flex; }
+  .fs-toolbar {
+    position: absolute; top: 16px; right: 16px; display: flex; gap: 8px; z-index: 160;
   }
-  .fullscreen-overlay .close-btn {
-    position: fixed; top: 16px; right: 16px;
-    background: var(--bg-card); border: 1px solid var(--border);
-    color: var(--text); width: 36px; height: 36px; border-radius: 50%;
+  .fs-toolbar button {
+    width: 40px; height: 40px; border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px; background: rgba(30,41,59,0.9); color: #e2e8f0;
     cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .fs-toolbar button:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .fs-viewport { width: 100%; height: 100%; overflow: hidden; cursor: grab; }
+  .fs-viewport.grabbing { cursor: grabbing; }
+  .fs-viewport .diagram-inner {
+    transform-origin: 0 0; display: flex; align-items: center; justify-content: center;
+    min-width: 100%; min-height: 100%;
+  }
+  .fs-hint {
+    position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+    color: rgba(255,255,255,0.45); font-size: 12px; pointer-events: none; z-index: 160;
   }
   .toast {
     position: fixed; bottom: 20px; right: 20px;
@@ -286,9 +306,17 @@ const HTML_PAGE = `<!DOCTYPE html>
     </div>
   </div>
 </div>
-<div class="fullscreen-overlay" id="fullscreen" onclick="closeFullscreen(event)">
-  <button class="close-btn" onclick="closeFullscreen(event)">&times;</button>
-  <div class="fs-content" id="fs-content"></div>
+<div class="fullscreen-overlay" id="fullscreen">
+  <div class="fs-toolbar">
+    <button onclick="fsZoom(1.3)" title="Zoom in">+</button>
+    <button onclick="fsZoom(1/1.3)" title="Zoom out">&minus;</button>
+    <button onclick="fsReset()" title="Reset zoom">1:1</button>
+    <button onclick="closeFullscreen()" title="Close (Esc)">&times;</button>
+  </div>
+  <div class="fs-viewport" id="fs-viewport">
+    <div class="diagram-inner" id="fs-inner"></div>
+  </div>
+  <div class="fs-hint">Scroll to zoom &middot; Drag to pan &middot; Esc to close</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -305,8 +333,84 @@ const pageTitleEl = document.getElementById('page-title');
 const pageMetaEl = document.getElementById('page-meta');
 const pageSourceEl = document.getElementById('page-source-files');
 const fullscreenEl = document.getElementById('fullscreen');
-const fsContentEl = document.getElementById('fs-content');
+const fsViewportEl = document.getElementById('fs-viewport');
+const fsInnerEl = document.getElementById('fs-inner');
 const toastEl = document.getElementById('toast');
+
+/* ── Zoom/pan helpers (ported from present-as-html) ── */
+function applyTransform(innerEl, state) {
+  innerEl.style.transform = 'translate(' + state.tx + 'px,' + state.ty + 'px) scale(' + state.scale + ')';
+}
+
+function makeZoomState() {
+  return { scale:1, tx:0, ty:0, dragging:false, dragStartX:0, dragStartY:0, dragTxStart:0, dragTyStart:0 };
+}
+
+function setupZoomPan(viewport, innerEl, state) {
+  viewport.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    const rect = viewport.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+    const newScale = Math.min(Math.max(state.scale * factor, 0.1), 10);
+    state.tx = mx - (mx - state.tx) * (newScale / state.scale);
+    state.ty = my - (my - state.ty) * (newScale / state.scale);
+    state.scale = newScale;
+    applyTransform(innerEl, state);
+  }, { passive: false });
+
+  viewport.addEventListener('mousedown', function(e) {
+    if (e.target.closest('button')) return;
+    state.dragging = true;
+    state.dragStartX = e.clientX;
+    state.dragStartY = e.clientY;
+    state.dragTxStart = state.tx;
+    state.dragTyStart = state.ty;
+    viewport.classList.add('grabbing');
+  });
+
+  window.addEventListener('mousemove', function(e) {
+    if (!state.dragging) return;
+    state.tx = state.dragTxStart + (e.clientX - state.dragStartX);
+    state.ty = state.dragTyStart + (e.clientY - state.dragStartY);
+    applyTransform(innerEl, state);
+  });
+
+  window.addEventListener('mouseup', function() {
+    if (state.dragging) {
+      state.dragging = false;
+      viewport.classList.remove('grabbing');
+    }
+  });
+}
+
+function fitDiagramToViewport(viewport, innerEl, state) {
+  requestAnimationFrame(() => {
+    const svg = innerEl.querySelector('svg');
+    if (!svg) return;
+    const vpRect = viewport.getBoundingClientRect();
+    // Get natural SVG size
+    const w = svg.viewBox?.baseVal?.width || svg.width?.baseVal?.value || svg.getBoundingClientRect().width;
+    const h = svg.viewBox?.baseVal?.height || svg.height?.baseVal?.value || svg.getBoundingClientRect().height;
+    if (w > 0 && h > 0) {
+      const scaleX = vpRect.width / w;
+      const scaleY = vpRect.height / h;
+      state.scale = Math.min(scaleX, scaleY, 1) * 0.95; // 95% to leave margin
+      // Center the diagram
+      state.tx = (vpRect.width - w * state.scale) / 2;
+      state.ty = (vpRect.height - h * state.scale) / 2;
+      applyTransform(innerEl, state);
+    }
+  });
+}
+
+// Per-card zoom states
+const cardZoomStates = new Map();
+
+// Fullscreen zoom state
+const fsState = makeZoomState();
+setupZoomPan(fsViewportEl, fsInnerEl, fsState);
 
 const allPages = [];
 const seenIds = new Set();
@@ -474,11 +578,12 @@ window.selectPage = async function(pageId) {
 async function renderCard(card, targetId) {
   const target = document.getElementById(targetId);
   if (!target) return;
+  const isDiagram = card.type === 'mermaid' || card.type === 'kroki' || card.type === 'svg';
 
   if (card.type === 'mermaid') {
     try {
       const { svg } = await mermaid.render('m-' + targetId, card.content);
-      target.innerHTML = '<div class="mermaid-container">' + svg + '</div>';
+      target.innerHTML = '<div class="diagram-viewport" id="vp-' + targetId + '"><div class="diagram-inner" id="di-' + targetId + '">' + svg + '</div><div class="diagram-hint">Scroll to zoom \\u00b7 Drag to pan</div></div>';
     } catch (err) {
       target.innerHTML = '<pre style="color:var(--red)">' + escapeHtml(err.message) + '</pre><pre>' + escapeHtml(card.content) + '</pre>';
     }
@@ -490,7 +595,8 @@ async function renderCard(card, targetId) {
         method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: card.content
       });
       if (fmt === 'svg') {
-        target.innerHTML = '<div class="kroki-container">' + await res.text() + '</div>';
+        const svgText = await res.text();
+        target.innerHTML = '<div class="diagram-viewport" id="vp-' + targetId + '"><div class="diagram-inner" id="di-' + targetId + '">' + svgText + '</div><div class="diagram-hint">Scroll to zoom \\u00b7 Drag to pan</div></div>';
       } else {
         target.innerHTML = '<div class="kroki-container"><img src="' + URL.createObjectURL(await res.blob()) + '" /></div>';
       }
@@ -500,9 +606,21 @@ async function renderCard(card, targetId) {
   } else if (card.type === 'html') {
     target.innerHTML = '<div class="html-container">' + card.content + '</div>';
   } else if (card.type === 'svg') {
-    target.innerHTML = '<div class="kroki-container">' + card.content + '</div>';
+    target.innerHTML = '<div class="diagram-viewport" id="vp-' + targetId + '"><div class="diagram-inner" id="di-' + targetId + '">' + card.content + '</div><div class="diagram-hint">Scroll to zoom \\u00b7 Drag to pan</div></div>';
   } else if (card.type === 'markdown') {
     target.innerHTML = '<div class="markdown-container">' + renderMarkdown(card.content) + '</div>';
+  }
+
+  // Set up zoom/pan for diagram cards
+  if (isDiagram) {
+    const vp = document.getElementById('vp-' + targetId);
+    const inner = document.getElementById('di-' + targetId);
+    if (vp && inner) {
+      const state = makeZoomState();
+      cardZoomStates.set(targetId, state);
+      setupZoomPan(vp, inner, state);
+      fitDiagramToViewport(vp, inner, state);
+    }
   }
 }
 
@@ -587,10 +705,38 @@ window.expandCard = function(cardIdx) {
   if (!page) return;
   const targetId = 'rt-' + activePageId + '-' + cardIdx;
   const target = document.getElementById(targetId);
-  if (target) {
-    const isLight = target.parentElement.classList.contains('light-bg');
-    fsContentEl.innerHTML = target.innerHTML;
-    fsContentEl.style.background = isLight ? '#f6f8fa' : '';
+  if (!target) return;
+  const isLight = target.parentElement.classList.contains('light-bg');
+  const card = page.cards[cardIdx];
+  const isDiagram = card && (card.type === 'mermaid' || card.type === 'kroki' || card.type === 'svg');
+
+  if (isDiagram) {
+    // Clone the SVG into the fullscreen viewport
+    const svg = target.querySelector('svg');
+    fsInnerEl.innerHTML = '';
+    if (svg) {
+      const clone = svg.cloneNode(true);
+      clone.removeAttribute('width');
+      clone.removeAttribute('height');
+      clone.style.maxWidth = 'none';
+      clone.style.maxHeight = 'none';
+      clone.style.width = 'auto';
+      clone.style.height = 'auto';
+      fsInnerEl.appendChild(clone);
+    } else {
+      fsInnerEl.innerHTML = target.innerHTML;
+    }
+    fsViewportEl.style.background = isLight ? '#f6f8fa' : '';
+    // Reset and fit
+    Object.assign(fsState, makeZoomState());
+    fullscreenEl.classList.add('active');
+    fitDiagramToViewport(fsViewportEl, fsInnerEl, fsState);
+  } else {
+    // Non-diagram: show content in a simple box
+    fsInnerEl.innerHTML = '<div style="background:var(--bg-card);border-radius:var(--radius);padding:24px;max-width:95vw;max-height:95vh;overflow:auto;">' + target.innerHTML + '</div>';
+    fsViewportEl.style.background = '';
+    Object.assign(fsState, makeZoomState());
+    applyTransform(fsInnerEl, fsState);
     fullscreenEl.classList.add('active');
   }
 };
@@ -607,10 +753,18 @@ window.copyPath = function(e, path) {
   window.open(e.target.href, '_blank');
 };
 
-window.closeFullscreen = function(e) {
-  if (e.target === fullscreenEl || e.target.classList.contains('close-btn')) {
-    fullscreenEl.classList.remove('active');
-  }
+window.fsZoom = function(factor) {
+  fsState.scale = Math.min(Math.max(fsState.scale * factor, 0.1), 10);
+  applyTransform(fsInnerEl, fsState);
+};
+
+window.fsReset = function() {
+  Object.assign(fsState, makeZoomState());
+  fitDiagramToViewport(fsViewportEl, fsInnerEl, fsState);
+};
+
+window.closeFullscreen = function() {
+  fullscreenEl.classList.remove('active');
 };
 
 window.clearAll = async function() {
@@ -647,7 +801,7 @@ function showToast(msg) {
 }
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') fullscreenEl.classList.remove('active');
+  if (e.key === 'Escape') closeFullscreen();
   if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
     const visible = allPages.filter(p => !activeSessionFilter || p.sessionId === activeSessionFilter);
     const idx = visible.findIndex(p => p.id === activePageId);

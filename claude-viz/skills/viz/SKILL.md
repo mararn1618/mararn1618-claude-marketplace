@@ -145,10 +145,35 @@ curl -s -X POST http://127.0.0.1:7891/api/pages \
 ## Dashboard Layout Tips
 
 - **Mix card types.** A good page combines a diagram with text explanation and maybe metrics.
-- **Use half-width** for text, small tables, and stats grids.
-- **Use full-width** for diagrams, large tables, and code blocks.
 - **Two half cards** next to each other create a nice side-by-side layout.
 - **Keep pages focused.** One topic per page. Push multiple pages for different topics.
+
+### Choosing `full` vs `half` for diagram cards
+
+Diagram cards have zoom/pan built in (scroll to zoom, drag to pan), so even large diagrams fit in a card. Choose the size based on the **natural shape** of the diagram:
+
+**Use `"full"` (spans both columns) when the diagram is wide/landscape:**
+- Flowcharts with `direction: LR` or `right` (horizontal flow)
+- Sequence diagrams with **4+ participants** (many columns)
+- ER/DBML diagrams with **4+ tables** arranged horizontally
+- Component/deployment diagrams with many side-by-side boxes
+- GraphViz with `rankdir=LR`
+- Wide C4 container diagrams
+
+**Use `"half"` (one column) when the diagram is tall/narrow or small:**
+- Sequence diagrams with **2–3 participants** (few columns, tall)
+- State diagrams, mind maps
+- Small class diagrams (1–3 classes)
+- DBML/ER with **2–3 tables**
+- Pie charts, small bar charts
+- Simple flowcharts with `direction: TB` (vertical)
+
+**Rule of thumb:** If the diagram has more horizontal extent than vertical, use `full`. If it's taller than wide or would look fine in half the space, use `half`. When in doubt, use `half` — the user can always expand to fullscreen.
+
+### Non-diagram cards
+
+- **Use `"half"`** for markdown text, tables, stats grids, and small HTML cards.
+- **Use `"full"`** only for wide tables (4+ columns) or large HTML dashboards.
 
 ## Which Diagram Type to Use
 
