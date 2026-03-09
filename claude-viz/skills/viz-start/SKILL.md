@@ -45,6 +45,10 @@ Tell the user: "Viz panel is open at http://127.0.0.1:7891 — place it next to 
 
 Tell the user the panel is ready. They should see a dark page with "Waiting for visualizations..." message.
 
+## After Startup
+
+To push visualizations, use the `/viz` skill — it contains the API reference and payload format.
+
 ## Stopping the Server
 
 If the user asks to stop the viz server:
