@@ -214,6 +214,15 @@ For detailed syntax examples of each Kroki diagram type, read `SKILL_BASE_DIR/kr
 
 **Mermaid diagrams render on a DARK background** (the viz panel's native dark theme). Mermaid uses its built-in `dark` theme, but **custom `style` directives override the theme's text color**. When you set a custom `fill` on a node, the text color reverts to Mermaid's default (light gray) which becomes unreadable on light fills.
 
+**CRITICAL — Mermaid line breaks in node labels:**
+
+`\n` does **NOT** work in Mermaid — it renders as literal `\n` text. Use `<br/>` instead:
+
+```
+BAD:  A["Line one\nLine two"]        --> renders as "Line one\nLine two"
+GOOD: A["Line one<br/>Line two"]     --> renders as two lines
+```
+
 **CRITICAL — Always set explicit text `color` in Mermaid `style` directives:**
 
 - **Light fill** (e.g., `#c8e6c9`, `#e3f2fd`, `#fff8e1`, `#fff9c4`, `#ffccbc`, `#fce4ec`, `#f3e5f5`, `#ffcdd2`, `#ffebee`) → use `color:#000`
