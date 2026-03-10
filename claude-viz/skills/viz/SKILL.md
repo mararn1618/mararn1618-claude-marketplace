@@ -212,7 +212,14 @@ For detailed syntax examples of each Kroki diagram type, read `SKILL_BASE_DIR/kr
 - **For D2**, default colors work well on light backgrounds.
 - The user can toggle dark/light background per card using the toggle button in the card header.
 
-**Mermaid diagrams render on a DARK background** (the viz panel's native dark theme). Mermaid uses its built-in `dark` theme — no custom styling needed.
+**Mermaid diagrams render on a DARK background** (the viz panel's native dark theme). Mermaid uses its built-in `dark` theme, but **custom `style` directives override the theme's text color**. When you set a custom `fill` on a node, the text color reverts to Mermaid's default (light gray) which becomes unreadable on light fills.
+
+**CRITICAL — Always set explicit text `color` in Mermaid `style` directives:**
+
+- **Light fill** (e.g., `#c8e6c9`, `#e3f2fd`, `#fff8e1`, `#fff9c4`, `#ffccbc`, `#fce4ec`, `#f3e5f5`, `#ffcdd2`, `#ffebee`) → use `color:#000`
+- **Dark fill** (e.g., `#333`, `#444`, `#1565C0`, `#2E7D32`, `#C62828`, `#7B1FA2`) → use `color:#fff`
+- **Example:** `style NODE fill:#c8e6c9,stroke:#2E7D32,color:#000`
+- **Every `style` line must include `color`** — never omit it when setting a custom `fill`.
 
 ## Important: Markdown Tables
 
