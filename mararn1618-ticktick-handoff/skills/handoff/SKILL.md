@@ -64,7 +64,7 @@ By project:
 Priority order:
 
 1. **`[ai:In Progress]`** — Resume these first. They were interrupted mid-work.
-2. **`[ai:Blocked]`** — Re-read the task content. Check if the human added new information, comments, or clarifications since the last session. If the blocker is resolved, move the task back to `[ai:In Progress]` and resume work. If still blocked, skip it.
+2. **`[ai:Blocked]`** — Re-read the task content. Look for the feedback form (`✏️ YOUR INPUT NEEDED`). If the human has replaced the `___` blanks with actual answers, the task is unblocked — move it back to `[ai:In Progress]` and resume work using the provided answers. Also check for any other new information added below the form. If `___` blanks remain unfilled, the task is still blocked — skip it.
 3. **`[ai:Todo]`** — Pick up new work.
 
 If there are no actionable tasks (no Todo, no In Progress, no unblocked Blocked tasks), tell the user and stop.
@@ -116,25 +116,60 @@ Do the actual work. This could be:
 
 If you need human input or cannot proceed:
 
-1. **Move to `[ai:Blocked]`** — Replace `[ai:In Progress]` with `[ai:Blocked]` in the task title:
+1. **Move to `[ai:Blocked]`** — Replace `[ai:In Progress]` with `[ai:Blocked]` in the task title and **set the due date to today** so it appears on the human's Today list:
    ```
    mcp__ticktick__update_task(
      task_id="<id>",
      project_id="<task's project_id>",
-     title="[ai:Blocked] <original title without prefix>"
+     title="[ai:Blocked] <original title without prefix>",
+     due_date="<today's date as YYYY-MM-DDT00:00:00+0000>"
    )
    ```
 
-2. **Document the blocker** — Update the task content with session notes (see Step 4 format). Be specific about what you need from the human so they know exactly how to unblock you.
+2. **Add session notes with a feedback form** — Append a session block to the task content that includes a structured feedback form. The form must be compact, visually distinct, and make it obvious where the human should type. Use this format:
 
-3. **Notify via Telegram** — Send a notification via `/notify-telegram:notify`:
+   ```
+   ---
+   ### 🤖 Claude Session — YYYY-MM-DD
+   **Status:** Blocked
+   **What I did:**
+   - <bullet points of actions taken>
+
+   **Blocker:** <one-line summary of why you're stuck>
+
+   ┌──── ✏️ YOUR INPUT NEEDED ────┐
+   │ ▸ <question>: ___
+   │ ▸ <question>: ___
+   │ ▸ <question>: ___
+   └──────────────────────────────┘
+   ---
+   ```
+
+   **Form rules:**
+   - Each `▸` line is one question. Keep questions short and specific.
+   - `___` marks where the human should type their answer (they replace `___` with their response).
+   - Only ask what you actually need — 1 to 4 questions max.
+   - If a question has known options, list them: `▸ Provider (AWS / GCP / Azure): ___`
+   - If a question is optional, mark it: `▸ Notes (optional): ___`
+
+   **Example** — task about setting up a cloud deployment:
+   ```
+   ┌──── ✏️ YOUR INPUT NEEDED ────┐
+   │ ▸ Which cloud provider (AWS / GCP / Azure)?: ___
+   │ ▸ Monthly budget cap?: ___
+   │ ▸ Preferred region (optional): ___
+   └──────────────────────────────┘
+   ```
+
+3. **Notify via Telegram** — Send a notification via `/notify-telegram:notify`. Tell the human to check the task and fill in the form:
    ```
    🤖 AI Task: Blocked — need your input
 
    Project: <project name>
    Task: <task title>
 
-   <specific question or information you need from the human>
+   <one-line summary of what you need>
+   → Please fill in the form in the task description.
    ```
 
 4. **Move on** — Continue to the next actionable task (Step 2 priority order), or stop if none remain.
@@ -147,12 +182,13 @@ Before marking a task done, **verify that the work actually meets the task's goa
 2. **Evaluate completion:**
    - If **criteria are defined**: only proceed if all criteria are met. If some criteria are not met, either continue working or move to `[ai:Blocked]` (Step 5) explaining what's remaining.
    - If **no criteria are defined**: use your best judgment — does the work fulfill the intent of the task title and description?
-3. **Move to `[ai:Done]`** — Only when satisfied:
+3. **Move to `[ai:Done]`** — Only when satisfied. **Set the due date to today** so it appears on the human's Today list for review:
    ```
    mcp__ticktick__update_task(
      task_id="<id>",
      project_id="<task's project_id>",
-     title="[ai:Done] <original title without prefix>"
+     title="[ai:Done] <original title without prefix>",
+     due_date="<today's date as YYYY-MM-DDT00:00:00+0000>"
    )
    ```
 
