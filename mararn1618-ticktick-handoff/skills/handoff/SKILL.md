@@ -1,10 +1,10 @@
 ---
-description: "Scan all TickTick projects for tasks tagged with [ai:Todo], work on them autonomously, track status via [ai:In Progress] and [ai:Done] title prefixes, and notify via Telegram. Works across any project — just add [ai:Todo] to any task title."
+description: "Scan all TickTick projects for tasks tagged with [ai:Todo], work on them autonomously, track status via [ai:In Progress], [ai:Blocked], and [ai:Done] title prefixes, and notify via Telegram. Works across any project — just add [ai:Todo] to any task title."
 ---
 
 # TickTick Handoff
 
-Work on tasks tagged with `[ai:Todo]` across **all** TickTick projects. The user can add `[ai:Todo]` to any task title in any project and Claude will pick it up.
+Work on tasks tagged with `[ai:Todo]` across **all** TickTick projects. The user can add `[ai:Todo]` to any task title in any project and Claude will pick it up. Tasks that need human input are moved to `[ai:Blocked]` and re-checked on subsequent runs.
 
 ## MCP Dependency
 
@@ -24,6 +24,7 @@ Track task status via **title prefixes**:
 |---|---|
 | `[ai:Todo]` | Ready to be picked up by Claude |
 | `[ai:In Progress]` | Claude is currently working on it |
+| `[ai:Blocked]` | Claude needs human input — waiting for unblock |
 | `[ai:Done]` | Claude finished — awaiting user review |
 
 Tasks without an `[ai:*]` prefix are **not for Claude** — never touch them.
@@ -40,7 +41,7 @@ Search across all projects for tasks tagged for Claude:
 mcp__ticktick__search_tasks(search_term="ai:")
 ```
 
-From the results, filter tasks whose titles contain `[ai:Todo]`, `[ai:In Progress]`, or `[ai:Done]` (case-insensitive match on the prefix).
+From the results, filter tasks whose titles contain `[ai:Todo]`, `[ai:In Progress]`, `[ai:Blocked]`, or `[ai:Done]` (case-insensitive match on the prefix).
 
 Display a summary grouped by project:
 
@@ -49,19 +50,24 @@ Display a summary grouped by project:
 ─────────────────
 [ai:Todo]:        X tasks
 [ai:In Progress]: X tasks
+[ai:Blocked]:     X tasks
 [ai:Done]:        X tasks
 
 By project:
   🦥 CWP — 2 tasks ([ai:Todo])
-  🏠 Haus — 1 task ([ai:In Progress])
+  🏠 Haus — 1 task ([ai:Blocked])
   ...
 ```
 
-### Step 2: Pick Up an [ai:Todo] Task
+### Step 2: Pick Up a Task
 
-- Only pick up tasks with `[ai:Todo]` prefix.
-- If there are `[ai:In Progress]` tasks, resume those first before picking up new ones.
-- If there are no `[ai:Todo]` or `[ai:In Progress]` tasks, tell the user and stop.
+Priority order:
+
+1. **`[ai:In Progress]`** — Resume these first. They were interrupted mid-work.
+2. **`[ai:Blocked]`** — Re-read the task content. Check if the human added new information, comments, or clarifications since the last session. If the blocker is resolved, move the task back to `[ai:In Progress]` and resume work. If still blocked, skip it.
+3. **`[ai:Todo]`** — Pick up new work.
+
+If there are no actionable tasks (no Todo, no In Progress, no unblocked Blocked tasks), tell the user and stop.
 
 ### Step 3: Move to [ai:In Progress]
 
@@ -108,24 +114,40 @@ Do the actual work. This could be:
 
 ### Step 5: Handle Blockers
 
-If you need user input or are blocked:
-1. Update the task content with what you need
-2. Send a Telegram notification via `/notify-telegram:notify`:
+If you need human input or cannot proceed:
+
+1. **Move to `[ai:Blocked]`** — Replace `[ai:In Progress]` with `[ai:Blocked]` in the task title:
    ```
-   🤖 AI Task: Need your input
+   mcp__ticktick__update_task(
+     task_id="<id>",
+     project_id="<task's project_id>",
+     title="[ai:Blocked] <original title without prefix>"
+   )
+   ```
+
+2. **Document the blocker** — Update the task content with session notes (see Step 4 format). Be specific about what you need from the human so they know exactly how to unblock you.
+
+3. **Notify via Telegram** — Send a notification via `/notify-telegram:notify`:
+   ```
+   🤖 AI Task: Blocked — need your input
 
    Project: <project name>
    Task: <task title>
 
-   <what you need from the user>
+   <specific question or information you need from the human>
    ```
-3. Move on to the next [ai:Todo] task if there is one, or stop and wait
 
-### Step 6: Move to [ai:Done]
+4. **Move on** — Continue to the next actionable task (Step 2 priority order), or stop if none remain.
 
-When the task is complete:
+### Step 6: Verify Completion and Move to [ai:Done]
 
-1. Replace `[ai:In Progress]` with `[ai:Done]` in the task title:
+Before marking a task done, **verify that the work actually meets the task's goals:**
+
+1. **Check for acceptance criteria** — Re-read the task content. Look for explicit goals, acceptance criteria, expected outcomes, or success conditions defined by the human.
+2. **Evaluate completion:**
+   - If **criteria are defined**: only proceed if all criteria are met. If some criteria are not met, either continue working or move to `[ai:Blocked]` (Step 5) explaining what's remaining.
+   - If **no criteria are defined**: use your best judgment — does the work fulfill the intent of the task title and description?
+3. **Move to `[ai:Done]`** — Only when satisfied:
    ```
    mcp__ticktick__update_task(
      task_id="<id>",
@@ -134,16 +156,16 @@ When the task is complete:
    )
    ```
 
-2. Add final session notes to the task content (see Step 4 format)
+4. Add final session notes to the task content (see Step 4 format)
 
-3. Send a Telegram notification via `/notify-telegram:notify`:
+5. Send a Telegram notification via `/notify-telegram:notify`:
    ```
    🤖 AI Task: Completed
 
    Project: <project name>
    Task: <task title>
 
-   <brief summary of what was done>
+   <brief summary of what was done and how criteria were met>
    ```
 
 ### Step 7: Continue
@@ -159,6 +181,8 @@ When all tasks are processed, notify the user:
 
 1. **NEVER check off / complete tasks** — the user reviews and closes them personally
 2. **NEVER touch tasks without `[ai:*]` prefix** — those are not for Claude
-3. **Always add session notes** to task content for continuity across sessions
-4. **Always notify via Telegram** when a task is done or when you need input
-5. **Preserve existing task content** — append your notes, never overwrite
+3. **NEVER mark `[ai:Done]` unless goals and acceptance criteria (if defined) are met** — if you can't finish, move to `[ai:Blocked]` instead
+4. **Always add session notes** to task content for continuity across sessions
+5. **Always notify via Telegram** when a task is done, blocked, or unblocked
+6. **Preserve existing task content** — append your notes, never overwrite
+7. **Always re-check `[ai:Blocked]` tasks** for new information before picking up new `[ai:Todo]` tasks
