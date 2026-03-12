@@ -23,9 +23,11 @@ Track task status via **title prefixes**:
 | Prefix | Meaning |
 |---|---|
 | `[ai:Todo]` | Ready to be picked up by Claude |
-| `[ai:In Progress]` | Claude is currently working on it |
-| `[ai:Blocked]` | Claude needs human input — waiting for unblock |
-| `[ai:Done]` | Claude finished — awaiting user review |
+| `[ai:In Progress] ✴️` | Claude is currently working on it |
+| `[ai:Blocked] ⛔️` | Claude needs human input — waiting for unblock |
+| `[ai:Done] ✅` | Claude finished — awaiting user review |
+
+The icon goes **after the prefix, before the task name** — e.g. `[ai:Blocked] ⛔️ Kaufland Karte freischalten`.
 
 Tasks without an `[ai:*]` prefix are **not for Claude** — never touch them.
 
@@ -77,7 +79,7 @@ Replace `[ai:Todo]` with `[ai:In Progress]` in the task title. Keep the rest of 
 mcp__ticktick__update_task(
   task_id="<id>",
   project_id="<task's project_id>",
-  title="[ai:In Progress] <original title without [ai:Todo] prefix>"
+  title="[ai:In Progress] ✴️ <original title without [ai:Todo] prefix>"
 )
 ```
 
@@ -121,7 +123,7 @@ If you need human input or cannot proceed:
    mcp__ticktick__update_task(
      task_id="<id>",
      project_id="<task's project_id>",
-     title="[ai:Blocked] <original title without prefix>",
+     title="[ai:Blocked] ⛔️ <original title without prefix>",
      due_date="<today's date as YYYY-MM-DDT00:00:00+0000>"
    )
    ```
@@ -137,11 +139,10 @@ If you need human input or cannot proceed:
 
    **Blocker:** <one-line summary of why you're stuck>
 
-   ┌──── ✏️ YOUR INPUT NEEDED ────┐
-   │ ▸ <question>: ___
-   │ ▸ <question>: ___
-   │ ▸ <question>: ___
-   └──────────────────────────────┘
+   ✏️ YOUR INPUT NEEDED
+   ▸ <question>: ___
+   ▸ <question>: ___
+   ▸ <question>: ___
    ---
    ```
 
@@ -149,16 +150,16 @@ If you need human input or cannot proceed:
    - Each `▸` line is one question. Keep questions short and specific.
    - `___` marks where the human should type their answer (they replace `___` with their response).
    - Only ask what you actually need — 1 to 4 questions max.
-   - If a question has known options, list them: `▸ Provider (AWS / GCP / Azure): ___`
+   - If a question has known options, list them: `▸ Provider (AWS / GCP / Azure)?: ___`
    - If a question is optional, mark it: `▸ Notes (optional): ___`
+   - Do not use box-drawing characters (`│┌└`) — keep lines clean so the human can easily type answers.
 
    **Example** — task about setting up a cloud deployment:
    ```
-   ┌──── ✏️ YOUR INPUT NEEDED ────┐
-   │ ▸ Which cloud provider (AWS / GCP / Azure)?: ___
-   │ ▸ Monthly budget cap?: ___
-   │ ▸ Preferred region (optional): ___
-   └──────────────────────────────┘
+   ✏️ YOUR INPUT NEEDED
+   ▸ Which cloud provider (AWS / GCP / Azure)?: ___
+   ▸ Monthly budget cap?: ___
+   ▸ Preferred region (optional): ___
    ```
 
 3. **Notify via Telegram** — Send a notification via `/notify-telegram:notify`. Tell the human to check the task and fill in the form:
@@ -187,7 +188,7 @@ Before marking a task done, **verify that the work actually meets the task's goa
    mcp__ticktick__update_task(
      task_id="<id>",
      project_id="<task's project_id>",
-     title="[ai:Done] <original title without prefix>",
+     title="[ai:Done] ✅ <original title without prefix>",
      due_date="<today's date as YYYY-MM-DDT00:00:00+0000>"
    )
    ```

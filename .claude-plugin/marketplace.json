@@ -38,7 +38,7 @@
       "name": "present-as-html",
       "source": "./present-as-html",
       "description": "Generate beautiful, self-contained HTML documents with sidebar navigation, Mermaid diagrams, resizable panels, and fullscreen zoom from any analysis or report content",
-      "version": "0.4.0"
+      "version": "0.5.0"
     },
     {
       "name": "hevy-api",
@@ -56,7 +56,7 @@
       "name": "mararn1618-ticktick-handoff",
       "source": "./mararn1618-ticktick-handoff",
       "description": "Process [ai:Todo] tasks from any TickTick project autonomously, with status tracking, [ai:Blocked] state for human input, and Telegram notifications",
-      "version": "0.4.0"
+      "version": "0.5.0"
     }
   ]
 }
