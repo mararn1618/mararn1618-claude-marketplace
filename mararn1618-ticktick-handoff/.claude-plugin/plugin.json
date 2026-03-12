@@ -1,7 +1,7 @@
 {
   "name": "mararn1618-ticktick-handoff",
-  "description": "Process tasks from the TickTick Handoff kanban board autonomously, with status tracking and Telegram notifications",
-  "version": "0.1.0",
+  "description": "Process [ai:Todo] tasks from any TickTick project autonomously, with status tracking and Telegram notifications",
+  "version": "0.2.0",
   "author": {
     "name": "mararn1618"
   },
