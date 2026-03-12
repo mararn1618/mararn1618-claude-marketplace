@@ -1,0 +1,9 @@
+{
+  "name": "mararn1618-ticktick-handoff",
+  "description": "Process tasks from the TickTick Handoff kanban board autonomously, with status tracking and Telegram notifications",
+  "version": "0.1.0",
+  "author": {
+    "name": "mararn1618"
+  },
+  "repository": "https://github.com/mararn1618/mararn1618-claude-marketplace"
+}
