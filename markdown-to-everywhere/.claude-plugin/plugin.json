@@ -1,0 +1,9 @@
+{
+  "name": "markdown-to-everywhere",
+  "description": "Markdown to Everywhere: author markdown with status badges, two-column layouts, and draw.io diagram references, then render to self-contained HTML with interactive diagrams or publish to Confluence Cloud with status macros, draw.io embeds, and layout sections. Includes bundled Python scripts (zero external deps) for HTML rendering, Confluence publishing, and programmatic draw.io diagram generation.",
+  "version": "1.0.0",
+  "author": {
+    "name": "mararn1618"
+  },
+  "repository": "https://github.com/mararn1618/mararn1618-claude-marketplace"
+}
