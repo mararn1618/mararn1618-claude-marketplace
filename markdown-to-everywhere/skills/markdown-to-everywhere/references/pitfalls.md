@@ -46,11 +46,11 @@ All known pitfalls from building and operating the doc pipeline.
 **Cause:** `]]>` inside a code block terminates the CDATA section prematurely.
 **Fix:** Escape `]]>` as `]]]]><![CDATA[>` before wrapping in CDATA. The `publish_confluence.py` script handles this automatically.
 
-## 8. Confluence draw.io "Diagram not found"
+## 8. Confluence draw.io shows stale diagram after re-upload
 
-**Symptom:** Draw.io macro on Confluence page shows "Diagram not found" error.
-**Cause:** Either (a) the attachment upload did not complete before the page was updated, or (b) `contentVer`/`revision` parameters in the macro do not match the actual attachment version.
-**Fix:** Upload all attachments first and verify 200 responses. For first-time uploads, use `contentVer=1` and `revision=1`. For re-uploads, read the attachment metadata to get the actual version.
+**Symptom:** You uploaded a new version of a .drawio attachment but the page still shows the old diagram. Or "Diagram not found" error.
+**Cause:** The draw.io macro caches the diagram version via `contentVer` and `revision` parameters. Uploading a new attachment version (e.g., v2) does not automatically update the macro, which still references the old version (e.g., v1).
+**Fix:** Two-step process: (1) Upload the attachment using `PUT` (not `POST`) on `/rest/api/content/{pageId}/child/attachment`. PUT handles both new and existing attachments. (2) Update the page content so the draw.io macro's `contentVer` and `revision` parameters match the new attachment version number. The `publish_confluence.py` script handles this automatically by reading the version from the upload response. For uploading existing attachments, `POST` returns 400 "Cannot add a new attachment with same name", so always use `PUT`.
 
 ## 9. Confluence 401/403 errors
 

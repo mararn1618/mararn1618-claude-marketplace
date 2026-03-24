@@ -35,7 +35,7 @@ X-Atlassian-Token: no-check
 ### Upload attachment
 
 ```
-POST https://{tenant}.atlassian.net/wiki/rest/api/content/{pageId}/child/attachment
+PUT https://{tenant}.atlassian.net/wiki/rest/api/content/{pageId}/child/attachment
 Headers:
   Cookie: tenant.session.token={jwt}
   X-Atlassian-Token: no-check
@@ -44,7 +44,9 @@ Body: multipart/form-data
   minorEdit: true
 ```
 
-Response: `results[0].id` = attachment content ID (strip `att` prefix for macro use).
+Use `PUT` (not `POST`). PUT handles both new and existing attachments. POST returns 400 if an attachment with the same filename already exists.
+
+Response: `results[0].id` = attachment content ID (strip `att` prefix for macro use). `results[0].version.number` = version (needed for draw.io macro `contentVer`/`revision` params).
 
 ### Get page version
 

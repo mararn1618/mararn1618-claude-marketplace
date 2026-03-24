@@ -48,13 +48,16 @@ from pathlib import Path
 # ============================================================
 
 def upload_attachment(base_url, session_token, page_id, filepath):
-    """Upload a file as an attachment to a Confluence page.
+    """Upload or update a file attachment on a Confluence page.
 
-    Returns (content_id, page_id) on success, None on failure.
-    Uses curl for multipart upload (urllib doesn't handle multipart well).
+    Uses PUT to handle both new and existing attachments (POST fails if
+    an attachment with the same filename already exists).
+
+    Returns (content_id, page_id, version) on success, None on failure.
+    The version is needed for the draw.io macro's contentVer/revision params.
     """
     result = subprocess.run([
-        "curl", "-s", "-X", "POST",
+        "curl", "-s", "-X", "PUT",
         f"{base_url}/rest/api/content/{page_id}/child/attachment",
         "-H", "X-Atlassian-Token: no-check",
         "-H", f"Cookie: tenant.session.token={session_token}",
@@ -66,7 +69,8 @@ def upload_attachment(base_url, session_token, page_id, filepath):
         results = d.get('results', [])
         if results:
             att_id = results[0]['id'].replace('att', '')
-            return (att_id, page_id)
+            att_ver = results[0].get('version', {}).get('number', 1)
+            return (att_id, page_id, att_ver)
     except (json.JSONDecodeError, KeyError, IndexError):
         pass
     print(f"  FAILED to upload {filepath}: {result.stdout[:200]}")
@@ -148,7 +152,13 @@ def inline(text):
     text = re.sub(r'`([^`]+)`', code_repl, text)
     return text
 
-def drawio_macro(content_id, page_id, filename, width=900, height=340):
+def drawio_macro(content_id, page_id, filename, version=1, width=900, height=340):
+    """Generate draw.io Confluence macro referencing an uploaded attachment.
+
+    CRITICAL: contentVer and revision must match the actual attachment version.
+    If the attachment is updated (new version uploaded), the macro must be
+    updated too, otherwise Confluence displays the old cached version.
+    """
     return (f'<ac:structured-macro ac:name="drawio" ac:schema-version="1" data-layout="default">'
             f'<ac:parameter ac:name="mVer">2</ac:parameter>'
             f'<ac:parameter ac:name="zoom">1</ac:parameter>'
@@ -158,8 +168,8 @@ def drawio_macro(content_id, page_id, filename, width=900, height=340):
             f'<ac:parameter ac:name="pageId">{page_id}</ac:parameter>'
             f'<ac:parameter ac:name="lbox">1</ac:parameter>'
             f'<ac:parameter ac:name="diagramDisplayName">{filename}</ac:parameter>'
-            f'<ac:parameter ac:name="contentVer">1</ac:parameter>'
-            f'<ac:parameter ac:name="revision">1</ac:parameter>'
+            f'<ac:parameter ac:name="contentVer">{version}</ac:parameter>'
+            f'<ac:parameter ac:name="revision">{version}</ac:parameter>'
             f'<ac:parameter ac:name="baseUrl">{{}}</ac:parameter>'
             f'<ac:parameter ac:name="diagramName">{filename}</ac:parameter>'
             f'<ac:parameter ac:name="pCenter">0</ac:parameter>'
@@ -346,11 +356,11 @@ def main():
         md_file = page_cfg['md_file']
         print(f"\n=== {title} (page {page_id}) ===")
 
-        # Upload diagrams
+        # Upload diagrams (PUT handles both new and existing attachments)
         diagram_map = {}
         for fname in page_cfg.get('diagrams', []):
             if fname in uploaded:
-                cid, pid = uploaded[fname]
+                cid, pid, ver = uploaded[fname]
             else:
                 fpath = diagrams_dir / fname
                 if not fpath.exists():
@@ -359,15 +369,15 @@ def main():
                 result = upload_attachment(base_url, token, page_id, str(fpath))
                 if not result:
                     continue
-                cid, pid = result
-                uploaded[fname] = (cid, pid)
-                print(f"  Uploaded {fname} -> {cid}")
-            diagram_map[fname] = drawio_macro(cid, pid, fname)
+                cid, pid, ver = result
+                uploaded[fname] = (cid, pid, ver)
+                print(f"  Uploaded {fname} -> {cid} v{ver}")
+            diagram_map[fname] = drawio_macro(cid, pid, fname, version=ver)
 
         # Also make already-uploaded diagrams available
-        for fname, (cid, pid) in uploaded.items():
+        for fname, (cid, pid, ver) in uploaded.items():
             if fname not in diagram_map:
-                diagram_map[fname] = drawio_macro(cid, pid, fname)
+                diagram_map[fname] = drawio_macro(cid, pid, fname, version=ver)
 
         # Read and convert markdown
         md_path = base_dir / md_file

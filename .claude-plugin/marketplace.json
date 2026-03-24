@@ -68,7 +68,7 @@
       "name": "markdown-to-everywhere",
       "source": "./markdown-to-everywhere",
       "description": "Markdown to Everywhere: author markdown with status badges, two-column layouts, and draw.io diagrams, then render to self-contained HTML or publish to Confluence Cloud with status macros, draw.io embeds, and layout sections",
-      "version": "1.0.0"
+      "version": "1.1.0"
     }
   ]
 }
