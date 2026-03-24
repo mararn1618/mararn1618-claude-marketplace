@@ -63,6 +63,12 @@
       "source": "./mararn1618-home-assistant",
       "description": "Personal Home Assistant setup profile — connection details, room layout, devices, integrations, and session workflow",
       "version": "0.1.0"
+    },
+    {
+      "name": "markdown-to-everywhere",
+      "source": "./markdown-to-everywhere",
+      "description": "Markdown to Everywhere: author markdown with status badges, two-column layouts, and draw.io diagrams, then render to self-contained HTML or publish to Confluence Cloud with status macros, draw.io embeds, and layout sections",
+      "version": "1.0.0"
     }
   ]
 }
