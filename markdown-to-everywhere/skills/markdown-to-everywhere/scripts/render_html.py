@@ -78,6 +78,7 @@ def md_to_html(md_text, base_dir):
     diagram_type = None
     diagram_buf = []
     table_buf = []
+    list_stack = []  # stack of ('ul'|'ol', indent_level)
     i = 0
 
     while i < len(lines):
@@ -88,9 +89,15 @@ def md_to_html(md_text, base_dir):
             out.append('<div class="columns"><div class="col">')
             i += 1; continue
         if line.strip() == '<!-- /columns -->':
+            while list_stack:
+                closing_tag = list_stack.pop()[0]
+                out.append(f'</li></{closing_tag}>')
             out.append('</div></div>')
             i += 1; continue
         if line.strip() == '<!-- col -->':
+            while list_stack:
+                closing_tag = list_stack.pop()[0]
+                out.append(f'</li></{closing_tag}>')
             out.append('</div><div class="col">')
             i += 1; continue
 
@@ -166,22 +173,60 @@ def md_to_html(md_text, base_dir):
             out.append(f'<blockquote><p>{text}</p></blockquote>')
             i += 1; continue
 
-        # Unordered list
-        m = re.match(r'^(\s*)[-*]\s+(.*)', line)
-        if m:
-            out.append(f'<li>{inline_format(m.group(2))}</li>')
+        # List items (unordered and ordered, with nesting)
+        m_ul = re.match(r'^(\s*)[-*]\s+(.*)', line)
+        m_ol = re.match(r'^(\s*)\d+\.\s+(.*)', line)
+        if m_ul or m_ol:
+            m = m_ul or m_ol
+            indent = len(m.group(1))
+            text = inline_format(m.group(2))
+            tag = 'ul' if m_ul else 'ol'
+
+            if not list_stack:
+                out.append(f'<{tag}>')
+                list_stack.append((tag, indent))
+            else:
+                _, prev_indent = list_stack[-1]
+                if indent > prev_indent:
+                    out.append(f'<{tag}>')
+                    list_stack.append((tag, indent))
+                else:
+                    while len(list_stack) > 1 and list_stack[-1][1] > indent:
+                        closing_tag = list_stack.pop()[0]
+                        out.append(f'</li></{closing_tag}>')
+                    if list_stack and list_stack[-1][0] != tag:
+                        closing_tag = list_stack.pop()[0]
+                        out.append(f'</{closing_tag}>')
+                        out.append(f'<{tag}>')
+                        list_stack.append((tag, indent))
+                    else:
+                        out.append('</li>')
+
+            out.append(f'<li>{text}')
             i += 1; continue
 
-        # Ordered list
-        m = re.match(r'^(\s*)\d+\.\s+(.*)', line)
-        if m:
-            out.append(f'<li>{inline_format(m.group(2))}</li>')
-            i += 1; continue
-
-        # Empty line
+        # Empty line: check if a list continues after the gap
         if line.strip() == '':
+            if list_stack:
+                # Look ahead: if next non-blank line is a list item, keep list open
+                j = i + 1
+                while j < len(lines) and lines[j].strip() == '':
+                    j += 1
+                if j < len(lines) and (re.match(r'^(\s*)[-*]\s+', lines[j]) or re.match(r'^(\s*)\d+\.\s+', lines[j])):
+                    i += 1; continue  # skip blank line, keep list open
+            # Close any open lists when we hit a blank non-continuation line
+            if list_stack:
+                while list_stack:
+                    closing_tag = list_stack.pop()[0]
+                    out.append(f'</li></{closing_tag}>')
             out.append('')
             i += 1; continue
+
+        # Close any open lists when we hit a non-list line
+        if list_stack:
+            while list_stack:
+                closing_tag = list_stack.pop()[0]
+                out.append(f'</li></{closing_tag}>')
 
         # HTML comments (skip)
         if line.strip().startswith('<!--'):
@@ -218,10 +263,19 @@ def render_table(rows):
 
 def inline_format(text):
     text = html_mod.escape(text)
-    text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', text)
-    text = re.sub(r'\*(.+?)\*', r'<em>\1</em>', text)
+    # Code spans first (protect their content from bold/italic processing)
     text = re.sub(r'`(.+?)`', r'<code>\1</code>', text)
-    text = re.sub(r'\[(.+?)\]\((.+?)\)', r'<a href="\2">\1</a>', text)
+    # Bold (must come before italic)
+    text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', text)
+    # Italic: require non-space after opening * and before closing *
+    text = re.sub(r'\*(\S.*?\S)\*', r'<em>\1</em>', text)
+    text = re.sub(r'\*(\S)\*', r'<em>\1</em>', text)  # single char italic
+    def _md_link(m):
+        label, href = m.group(1), m.group(2)
+        if href.endswith('.md'):
+            href = href[:-3] + '.html'
+        return f'<a href="{href}">{label}</a>'
+    text = re.sub(r'\[(.+?)\]\((.+?)\)', _md_link, text)
     # Status badges (longest patterns first to avoid partial matches)
     tag_replacements = [
         ('[EXISTING, extended]', 'changed'), ('[EXISTING - reframed]', 'changed'),

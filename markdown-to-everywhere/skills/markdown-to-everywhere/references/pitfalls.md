@@ -93,3 +93,21 @@ All known pitfalls from building and operating the doc pipeline.
 **Symptom:** Draw.io diagram works on one Confluence page but shows "not found" on another.
 **Cause:** The `custContentId` and `pageId` in the drawio macro must reference where the attachment actually lives.
 **Fix:** Upload each diagram to the page that displays it, or use the correct `pageId` parameter to reference the page where the attachment was uploaded.
+
+## 16. Nested sub-lists render flat
+
+**Symptom:** Indented list items (`  - child`) appear at the same level as their parent items. No visual nesting.
+**Cause:** The renderer treated all list items as top-level, ignoring indentation. No `<ul>` nesting was generated.
+**Fix:** The renderer now tracks a `list_stack` of `(tag, indent_level)`. Indentation changes trigger opening/closing of nested `<ul>`/`<ol>` elements. Fixed in `render_html.py`.
+
+## 17. Asterisks in technical expressions render as italic
+
+**Symptom:** `* *` in cron expressions like `0 4 3 * *` renders as empty italic `<em> </em>` instead of literal asterisks.
+**Cause:** The italic regex `\*(.+?)\*` matched the space between two asterisks as italic content.
+**Fix:** Code spans are now processed before bold/italic. The italic regex requires non-space boundaries: `\*(\S.*?\S)\*`. This prevents `* *` from matching while still catching `*real italic*`.
+
+## 18. Numbered lists broken by blank lines
+
+**Symptom:** Items `1.`, `2.`, `3.` separated by blank lines each render as separate `<ol>` starting from 1.
+**Cause:** A blank line closed the current list. The next numbered item opened a new `<ol>`.
+**Fix:** The renderer now looks ahead on blank lines: if the next non-blank line is a list item, the list stays open and the blank line is skipped.
