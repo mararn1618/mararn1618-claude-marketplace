@@ -1,14 +1,14 @@
 ---
-description: "Scan all TickTick projects for tasks tagged with [ai:Todo], work on them autonomously, track status via [ai:In Progress], [ai:Blocked], and [ai:Done] title prefixes, and notify via Telegram. Works across any project — just add [ai:Todo] to any task title."
+description: "Scan TickTick for tasks tagged with 'ai', 'handoff', or 'delegate', work on them autonomously, track status via Kanban columns in the Handoff project, and notify via Telegram."
 ---
 
 # TickTick Handoff
 
-Work on tasks tagged with `[ai:Todo]` across **all** TickTick projects. The user can add `[ai:Todo]` to any task title in any project and Claude will pick it up. Tasks that need human input are moved to `[ai:Blocked]` and re-checked on subsequent runs.
+Work on tasks tagged with `ai`, `handoff`, or `delegate` across **all** TickTick projects. The user can add any of these tags to any task and Claude will pick it up. Status is tracked via Kanban columns in the **👊Handoff** project.
 
 ## MCP Dependency
 
-This skill requires the **TickTick MCP server** (`mcp__ticktick__*` tools).
+This skill requires the **TickTick MCP server** (`mcp__claude_ai_Ticktick_MCP_official__*` tools).
 If TickTick tools are not available, stop and tell the user to configure the TickTick MCP server.
 
 ## Notification Dependency
@@ -16,80 +16,150 @@ If TickTick tools are not available, stop and tell the user to configure the Tic
 This skill uses the **notify-telegram** skill (`/notify-telegram:notify`) for user notifications.
 If Telegram is not configured (`~/.claude/telegram.env` missing), warn the user and offer to set it up.
 
-## Status Tracking
+## Constants
 
-Track task status via **title prefixes**:
+### Handoff Project
 
-| Prefix | Meaning |
-|---|---|
-| `[ai:Todo]` | Ready to be picked up by Claude |
-| `[ai:In Progress] ✴️` | Claude is currently working on it |
-| `[ai:Blocked] ⛔️` | Claude needs human input — waiting for unblock |
-| `[ai:Done] ✅` | Claude finished — awaiting user review |
+| Key | Value |
+|-----|-------|
+| Project ID | `69b03f471194d102ebcb3044` |
+| Project Name | 👊Handoff |
+| View Mode | kanban |
 
-The icon goes **after the prefix, before the task name** — e.g. `[ai:Blocked] ⛔️ Kaufland Karte freischalten`.
+### Column IDs
 
-Tasks without an `[ai:*]` prefix are **not for Claude** — never touch them.
+| Column | ID | AI behavior |
+|--------|----|-------------|
+| **Backlog** | `69b03f5a01cb1102ebcb3046` | Skip -- AI does not pick these up automatically |
+| **Todo** | `69b03f6b03bc9102ebcb3375` | Ready for AI pickup |
+| **In Progress** | `69b03f7303879102ebcb348f` | AI is currently working on it |
+| **Blocked** | `69c65b34fc1f51066dabb200` | AI needs human input |
+| **Done** | `69b03f76038b9102ebcb3496` | Finished, awaiting user review |
 
-Use `mcp__ticktick__update_task` to update the task title with the appropriate prefix.
+### Delegation Tags
+
+Any of these tags marks a task for Claude: **`ai`**, **`handoff`**, **`delegate`**
+
+All three are synonyms. The user can use whichever they prefer.
+
+### Status Icons (Title Prefix)
+
+Status is tracked via columns, but icons are added to the title for visual clarity:
+
+| Status | Icon prefix | Example title |
+|--------|-------------|---------------|
+| Backlog / Todo | *(none)* | `Kaufland Karte freischalten` |
+| In Progress | `✴️` | `✴️ Kaufland Karte freischalten` |
+| Blocked | `⛔️` | `⛔️ Kaufland Karte freischalten` |
+| Done | `✅` | `✅ Kaufland Karte freischalten` |
+
+When changing status, **replace** the existing icon (if any) with the new one. Strip any old `[ai:*]` prefixes if encountered (migration from v0.5).
 
 ## Workflow
 
 ### Step 1: Scan All Projects
 
-Search across all projects for tasks tagged for Claude:
+Find all tasks tagged for Claude. Run three filter queries (one per tag):
 
 ```
-mcp__ticktick__search_tasks(search_term="ai:")
+mcp__claude_ai_Ticktick_MCP_official__filter_tasks(taskFilterDto={tag: ["ai"], status: [0]})
+mcp__claude_ai_Ticktick_MCP_official__filter_tasks(taskFilterDto={tag: ["handoff"], status: [0]})
+mcp__claude_ai_Ticktick_MCP_official__filter_tasks(taskFilterDto={tag: ["delegate"], status: [0]})
 ```
 
-From the results, filter tasks whose titles contain `[ai:Todo]`, `[ai:In Progress]`, `[ai:Blocked]`, or `[ai:Done]` (case-insensitive match on the prefix).
+Deduplicate by task ID (a task may have multiple tags).
 
-Display a summary grouped by project:
+Also load the Handoff project to get column definitions:
+
+```
+mcp__claude_ai_Ticktick_MCP_official__get_project_with_undone_tasks(projectId="69b03f471194d102ebcb3044")
+```
+
+Display a summary:
 
 ```
 🤖 AI Tasks
 ─────────────────
-[ai:Todo]:        X tasks
-[ai:In Progress]: X tasks
-[ai:Blocked]:     X tasks
-[ai:Done]:        X tasks
+Backlog:     X tasks (skipped)
+Todo:        X tasks
+In Progress: X tasks
+Blocked:     X tasks
+Done:        X tasks
 
-By project:
-  🦥 CWP — 2 tasks ([ai:Todo])
-  🏠 Haus — 1 task ([ai:Blocked])
+Pending from other projects:
+  🏠 Haus -- 1 task (will move to 👊Handoff)
   ...
 ```
 
-### Step 2: Pick Up a Task
+### Step 2: Route & Classify
+
+For each tagged task, determine its situation:
+
+| Situation | Action |
+|-----------|--------|
+| In 👊Handoff, Column = In Progress | Resume (highest priority) |
+| In 👊Handoff, Column = Blocked | Check if unblocked (second priority) |
+| In 👊Handoff, Column = Todo | Pick up (third priority) |
+| In 👊Handoff, Column = Backlog | Skip |
+| In 👊Handoff, Column = Done | Skip |
+| **In another project** | Move to 👊Handoff (see below), then treat as Todo |
+
+**Moving from another project:**
+
+1. Note the source project in the task content:
+   ```
+   📍 Origin: <Project Name> (<project_id>)
+   ```
+2. Move the task:
+   ```
+   mcp__claude_ai_Ticktick_MCP_official__move_task(moveProjects=[{
+     taskId: "<id>",
+     fromProjectId: "<source_project_id>",
+     toProjectId: "69b03f471194d102ebcb3044",
+     sortOrder: 0
+   }])
+   ```
+3. Set column to Todo:
+   ```
+   mcp__claude_ai_Ticktick_MCP_official__update_task(taskId="<id>", task={
+     id: "<id>",
+     projectId: "69b03f471194d102ebcb3044",
+     columnId: "69b03f6b03bc9102ebcb3375"
+   })
+   ```
+
+### Step 3: Pick Up a Task
 
 Priority order:
 
-1. **`[ai:In Progress]`** — Resume these first. They were interrupted mid-work.
-2. **`[ai:Blocked]`** — Re-read the task content. Look for the feedback form (`✏️ YOUR INPUT NEEDED`). If the human has replaced the `___` blanks with actual answers, the task is unblocked — move it back to `[ai:In Progress]` and resume work using the provided answers. Also check for any other new information added below the form. If `___` blanks remain unfilled, the task is still blocked — skip it.
-3. **`[ai:Todo]`** — Pick up new work.
+1. **In Progress** -- Resume these first. They were interrupted mid-work.
+2. **Blocked** -- Re-read the task content. Look for the feedback form (`YOUR INPUT NEEDED`). If the human has replaced the `___` blanks with actual answers, the task is unblocked -- move it to In Progress and resume. If `___` blanks remain unfilled, skip it.
+3. **Todo** -- Pick up new work.
 
-If there are no actionable tasks (no Todo, no In Progress, no unblocked Blocked tasks), tell the user and stop.
+If there are no actionable tasks, tell the user and stop.
 
-### Step 3: Move to [ai:In Progress]
+### Step 4: Move to In Progress
 
-Replace `[ai:Todo]` with `[ai:In Progress]` in the task title. Keep the rest of the title unchanged.
+Update the column and add the status icon to the title:
 
 ```
-mcp__ticktick__update_task(
-  task_id="<id>",
-  project_id="<task's project_id>",
-  title="[ai:In Progress] ✴️ <original title without [ai:Todo] prefix>"
-)
+mcp__claude_ai_Ticktick_MCP_official__update_task(taskId="<id>", task={
+  id: "<id>",
+  projectId: "69b03f471194d102ebcb3044",
+  columnId: "69b03f7303879102ebcb348f",
+  title: "✴️ <clean task title>"
+})
 ```
 
-### Step 4: Work on the Task
+"Clean task title" means: strip any existing status icon (✴️/⛔️/✅) or old `[ai:*]` prefix from the front.
+
+### Step 5: Work on the Task
 
 Read the task content carefully. It may contain:
-- **Skills needed** — what tools/skills are required
-- **Context** — background information
-- **Problem** — what needs to be solved
-- **Solution** — expected approach or constraints
+- **Skills needed** -- what tools/skills are required
+- **Context** -- background information
+- **Problem** -- what needs to be solved
+- **Solution** -- expected approach or constraints
 - Links, screenshots, or references
 
 Do the actual work. This could be:
@@ -97,11 +167,11 @@ Do the actual work. This could be:
 - Browser automation, API calls
 - Anything the task describes
 
-**Add progress notes** to the task content as you work, using `mcp__ticktick__update_task` with updated `content`. Append to existing content, never overwrite. Use this format:
+**Add progress notes** to the task content as you work. Append to existing content, never overwrite. Use this format:
 
 ```
 ---
-### 🤖 Claude Session — YYYY-MM-DD
+### 🤖 Claude Session -- YYYY-MM-DD
 **Status:** In Progress / Blocked / Done
 **What I did:**
 - <bullet points of actions taken>
@@ -114,112 +184,123 @@ Do the actual work. This could be:
 ---
 ```
 
-### Step 5: Handle Blockers
+### Step 6: Handle Blockers
 
 If you need human input or cannot proceed:
 
-1. **Move to `[ai:Blocked]`** — Replace `[ai:In Progress]` with `[ai:Blocked]` in the task title and **set the due date to today** so it appears on the human's Today list:
+1. **Move to Blocked column** and update the title icon. **Set the due date to today** so it appears on the human's Today list:
    ```
-   mcp__ticktick__update_task(
-     task_id="<id>",
-     project_id="<task's project_id>",
-     title="[ai:Blocked] ⛔️ <original title without prefix>",
-     due_date="<today's date as YYYY-MM-DDT00:00:00+0000>"
-   )
+   mcp__claude_ai_Ticktick_MCP_official__update_task(taskId="<id>", task={
+     id: "<id>",
+     projectId: "69b03f471194d102ebcb3044",
+     columnId: "69c65b34fc1f51066dabb200",
+     title: "⛔️ <clean task title>",
+     dueDate: "<today as YYYY-MM-DDT00:00:00.000+0000>"
+   })
    ```
 
-2. **Add session notes with a feedback form** — Append a session block to the task content that includes a structured feedback form. The form must be compact, visually distinct, and make it obvious where the human should type. Use this format:
+2. **Add session notes with a feedback form** -- Append a session block to the task content that includes a structured feedback form:
 
    ```
    ---
-   ### 🤖 Claude Session — YYYY-MM-DD
+   ### 🤖 Claude Session -- YYYY-MM-DD
    **Status:** Blocked
    **What I did:**
    - <bullet points of actions taken>
 
    **Blocker:** <one-line summary of why you're stuck>
 
-   ✏️ YOUR INPUT NEEDED
-   ▸ <question>: ___
-   ▸ <question>: ___
-   ▸ <question>: ___
+   YOUR INPUT NEEDED
+   > <question>: ___
+   > <question>: ___
+   > <question>: ___
    ---
    ```
 
    **Form rules:**
-   - Each `▸` line is one question. Keep questions short and specific.
+   - Each `>` line is one question. Keep questions short and specific.
    - `___` marks where the human should type their answer (they replace `___` with their response).
-   - Only ask what you actually need — 1 to 4 questions max.
-   - If a question has known options, list them: `▸ Provider (AWS / GCP / Azure)?: ___`
-   - If a question is optional, mark it: `▸ Notes (optional): ___`
-   - Do not use box-drawing characters (`│┌└`) — keep lines clean so the human can easily type answers.
+   - Only ask what you actually need -- 1 to 4 questions max.
+   - If a question has known options, list them: `> Provider (AWS / GCP / Azure)?: ___`
+   - If a question is optional, mark it: `> Notes (optional): ___`
 
-   **Example** — task about setting up a cloud deployment:
+3. **Notify via Telegram** -- Send a notification via `/notify-telegram:notify`:
    ```
-   ✏️ YOUR INPUT NEEDED
-   ▸ Which cloud provider (AWS / GCP / Azure)?: ___
-   ▸ Monthly budget cap?: ___
-   ▸ Preferred region (optional): ___
-   ```
+   🤖 AI Task: Blocked
 
-3. **Notify via Telegram** — Send a notification via `/notify-telegram:notify`. Tell the human to check the task and fill in the form:
-   ```
-   🤖 AI Task: Blocked — need your input
-
-   Project: <project name>
    Task: <task title>
 
    <one-line summary of what you need>
-   → Please fill in the form in the task description.
+   Please check the task in TickTick and fill in the form.
    ```
 
-4. **Move on** — Continue to the next actionable task (Step 2 priority order), or stop if none remain.
+4. **Move on** -- Continue to the next actionable task (Step 3 priority order), or stop if none remain.
 
-### Step 6: Verify Completion and Move to [ai:Done]
+### Step 7: Verify Completion and Move to Done
 
 Before marking a task done, **verify that the work actually meets the task's goals:**
 
-1. **Check for acceptance criteria** — Re-read the task content. Look for explicit goals, acceptance criteria, expected outcomes, or success conditions defined by the human.
+1. **Check for acceptance criteria** -- Re-read the task content. Look for explicit goals, acceptance criteria, expected outcomes, or success conditions.
 2. **Evaluate completion:**
-   - If **criteria are defined**: only proceed if all criteria are met. If some criteria are not met, either continue working or move to `[ai:Blocked]` (Step 5) explaining what's remaining.
-   - If **no criteria are defined**: use your best judgment — does the work fulfill the intent of the task title and description?
-3. **Move to `[ai:Done]`** — Only when satisfied. **Set the due date to today** so it appears on the human's Today list for review:
+   - If **criteria are defined**: only proceed if all criteria are met. If not, continue working or move to Blocked (Step 6).
+   - If **no criteria are defined**: use your best judgment.
+3. **Move to Done column** and update the title icon. **Set the due date to today**:
    ```
-   mcp__ticktick__update_task(
-     task_id="<id>",
-     project_id="<task's project_id>",
-     title="[ai:Done] ✅ <original title without prefix>",
-     due_date="<today's date as YYYY-MM-DDT00:00:00+0000>"
-   )
+   mcp__claude_ai_Ticktick_MCP_official__update_task(taskId="<id>", task={
+     id: "<id>",
+     projectId: "69b03f471194d102ebcb3044",
+     columnId: "69b03f76038b9102ebcb3496",
+     title: "✅ <clean task title>",
+     dueDate: "<today as YYYY-MM-DDT00:00:00.000+0000>"
+   })
    ```
 
-4. Add final session notes to the task content (see Step 4 format)
+4. Add final session notes to the task content (see Step 5 format).
 
 5. Send a Telegram notification via `/notify-telegram:notify`:
    ```
    🤖 AI Task: Completed
 
-   Project: <project name>
    Task: <task title>
 
-   <brief summary of what was done and how criteria were met>
+   <brief summary of what was done>
    ```
 
-### Step 7: Continue
+### Step 8: Continue
 
-After completing a task, check for more [ai:Todo] tasks and repeat from Step 2.
+After completing a task, check for more tasks and repeat from Step 3.
 When all tasks are processed, notify the user:
 
 ```
-🤖 All [ai:Todo] tasks processed — nothing left to pick up.
+🤖 All AI tasks processed -- nothing left to pick up.
 ```
+
+## Legacy Migration
+
+If you encounter tasks with old-style `[ai:Todo]`, `[ai:In Progress]`, `[ai:Blocked]`, or `[ai:Done]` title prefixes (from v0.5):
+
+1. Add the `ai` tag to the task if not already present
+2. Strip the `[ai:*]` prefix from the title
+3. Add the appropriate status icon
+4. Move the task to the correct column based on the old prefix:
+   - `[ai:Todo]` -> Todo column
+   - `[ai:In Progress]` -> In Progress column
+   - `[ai:Blocked]` -> Blocked column, keep ⛔️ icon
+   - `[ai:Done]` -> Done column, keep ✅ icon
+
+Do this silently as part of normal processing.
+
+## Backlog Tasks
+
+Tasks in the **Backlog** column are not picked up automatically. If the user asks Claude to review, prioritize, or suggest from the backlog, Claude may do so -- but never start working on a Backlog task without being asked.
 
 ## Rules
 
-1. **NEVER check off / complete tasks** — the user reviews and closes them personally
-2. **NEVER touch tasks without `[ai:*]` prefix** — those are not for Claude
-3. **NEVER mark `[ai:Done]` unless goals and acceptance criteria (if defined) are met** — if you can't finish, move to `[ai:Blocked]` instead
+1. **NEVER check off / complete tasks** -- the user reviews and closes them personally
+2. **NEVER touch tasks without a delegation tag** (`ai`, `handoff`, `delegate`) -- those are not for Claude
+3. **NEVER move to Done unless goals and acceptance criteria (if defined) are met** -- if you can't finish, move to Blocked instead
 4. **Always add session notes** to task content for continuity across sessions
 5. **Always notify via Telegram** when a task is done, blocked, or unblocked
-6. **Preserve existing task content** — append your notes, never overwrite
-7. **Always re-check `[ai:Blocked]` tasks** for new information before picking up new `[ai:Todo]` tasks
+6. **Preserve existing task content** -- append your notes, never overwrite
+7. **Always re-check Blocked tasks** for new information before picking up new Todo tasks
+8. **Keep delegation tags** -- never remove the `ai`/`handoff`/`delegate` tag, even after Done (history)
