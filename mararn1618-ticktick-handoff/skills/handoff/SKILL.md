@@ -16,6 +16,14 @@ If TickTick tools are not available, stop and tell the user to configure the Tic
 This skill uses the **notify-telegram** skill (`/notify-telegram:notify`) for user notifications.
 If Telegram is not configured (`~/.claude/telegram.env` missing), warn the user and offer to set it up.
 
+## Critical: Column Updates Must Be Separate API Calls
+
+**NEVER bundle `columnId` changes with `title` or `content` changes in a single `update_task` call.** The TickTick API silently ignores column changes when other fields are updated simultaneously.
+
+Always use **two sequential calls**:
+1. First call: update title, content, dueDate, etc.
+2. Second call: update columnId only
+
 ## Constants
 
 ### Handoff Project
@@ -62,9 +70,9 @@ When changing status, **replace** the existing icon (if any) with the new one. S
 Find all tasks tagged for Claude. Run three filter queries (one per tag):
 
 ```
-mcp__claude_ai_Ticktick_MCP_official__filter_tasks(taskFilterDto={tag: ["ai"], status: [0]})
-mcp__claude_ai_Ticktick_MCP_official__filter_tasks(taskFilterDto={tag: ["handoff"], status: [0]})
-mcp__claude_ai_Ticktick_MCP_official__filter_tasks(taskFilterDto={tag: ["delegate"], status: [0]})
+mcp__claude_ai_Ticktick_MCP_official__filter_tasks(filter={tag: ["ai"], status: [0]})
+mcp__claude_ai_Ticktick_MCP_official__filter_tasks(filter={tag: ["handoff"], status: [0]})
+mcp__claude_ai_Ticktick_MCP_official__filter_tasks(filter={tag: ["delegate"], status: [0]})
 ```
 
 Deduplicate by task ID (a task may have multiple tags).
@@ -72,7 +80,7 @@ Deduplicate by task ID (a task may have multiple tags).
 Also load the Handoff project to get column definitions:
 
 ```
-mcp__claude_ai_Ticktick_MCP_official__get_project_with_undone_tasks(projectId="69b03f471194d102ebcb3044")
+mcp__claude_ai_Ticktick_MCP_official__get_project_with_undone_tasks(project_id="69b03f471194d102ebcb3044")
 ```
 
 Display a summary:
@@ -112,17 +120,15 @@ For each tagged task, determine its situation:
    ```
 2. Move the task:
    ```
-   mcp__claude_ai_Ticktick_MCP_official__move_task(moveProjects=[{
+   mcp__claude_ai_Ticktick_MCP_official__move_task(moves=[{
      taskId: "<id>",
      fromProjectId: "<source_project_id>",
-     toProjectId: "69b03f471194d102ebcb3044",
-     sortOrder: 0
+     toProjectId: "69b03f471194d102ebcb3044"
    }])
    ```
-3. Set column to Todo:
+3. Set column to Todo (separate call -- see "Critical" section above):
    ```
-   mcp__claude_ai_Ticktick_MCP_official__update_task(taskId="<id>", task={
-     id: "<id>",
+   mcp__claude_ai_Ticktick_MCP_official__update_task(task_id="<id>", task={
      projectId: "69b03f471194d102ebcb3044",
      columnId: "69b03f6b03bc9102ebcb3375"
    })
@@ -140,14 +146,19 @@ If there are no actionable tasks, tell the user and stop.
 
 ### Step 4: Move to In Progress
 
-Update the column and add the status icon to the title:
+Update title first, then column in a **separate call** (see "Critical" section):
 
 ```
-mcp__claude_ai_Ticktick_MCP_official__update_task(taskId="<id>", task={
-  id: "<id>",
+// Call 1: update title
+mcp__claude_ai_Ticktick_MCP_official__update_task(task_id="<id>", task={
   projectId: "69b03f471194d102ebcb3044",
-  columnId: "69b03f7303879102ebcb348f",
   title: "✴️ <clean task title>"
+})
+
+// Call 2: update column (must be separate!)
+mcp__claude_ai_Ticktick_MCP_official__update_task(task_id="<id>", task={
+  projectId: "69b03f471194d102ebcb3044",
+  columnId: "69b03f7303879102ebcb348f"
 })
 ```
 
@@ -188,14 +199,19 @@ Do the actual work. This could be:
 
 If you need human input or cannot proceed:
 
-1. **Move to Blocked column** and update the title icon. **Set the due date to today** so it appears on the human's Today list:
+1. **Move to Blocked column** and update the title icon. **Set the due date to today** so it appears on the human's Today list. Use **two separate calls**:
    ```
-   mcp__claude_ai_Ticktick_MCP_official__update_task(taskId="<id>", task={
-     id: "<id>",
+   // Call 1: update title + due date
+   mcp__claude_ai_Ticktick_MCP_official__update_task(task_id="<id>", task={
      projectId: "69b03f471194d102ebcb3044",
-     columnId: "69c65b34fc1f51066dabb200",
      title: "⛔️ <clean task title>",
      dueDate: "<today as YYYY-MM-DDT00:00:00.000+0000>"
+   })
+
+   // Call 2: update column (must be separate!)
+   mcp__claude_ai_Ticktick_MCP_official__update_task(task_id="<id>", task={
+     projectId: "69b03f471194d102ebcb3044",
+     columnId: "69c65b34fc1f51066dabb200"
    })
    ```
 
@@ -244,14 +260,19 @@ Before marking a task done, **verify that the work actually meets the task's goa
 2. **Evaluate completion:**
    - If **criteria are defined**: only proceed if all criteria are met. If not, continue working or move to Blocked (Step 6).
    - If **no criteria are defined**: use your best judgment.
-3. **Move to Done column** and update the title icon. **Set the due date to today**:
+3. **Move to Done column** and update the title icon. **Set the due date to today**. Use **two separate calls**:
    ```
-   mcp__claude_ai_Ticktick_MCP_official__update_task(taskId="<id>", task={
-     id: "<id>",
+   // Call 1: update title + due date
+   mcp__claude_ai_Ticktick_MCP_official__update_task(task_id="<id>", task={
      projectId: "69b03f471194d102ebcb3044",
-     columnId: "69b03f76038b9102ebcb3496",
      title: "✅ <clean task title>",
      dueDate: "<today as YYYY-MM-DDT00:00:00.000+0000>"
+   })
+
+   // Call 2: update column (must be separate!)
+   mcp__claude_ai_Ticktick_MCP_official__update_task(task_id="<id>", task={
+     projectId: "69b03f471194d102ebcb3044",
+     columnId: "69b03f76038b9102ebcb3496"
    })
    ```
 
