@@ -1,0 +1,9 @@
+{
+  "name": "mararn1618-kleinanzeigen",
+  "description": "Create optimized kleinanzeigen.de listings from photos and a brief description. Researches the product, finds fair prices, selects and sorts photos, and generates a ready-to-post German listing using a Generator/Adversary agent team for quality assurance.",
+  "version": "0.1.0",
+  "author": {
+    "name": "mararn1618"
+  },
+  "repository": "https://github.com/mararn1618/mararn1618-claude-marketplace"
+}
