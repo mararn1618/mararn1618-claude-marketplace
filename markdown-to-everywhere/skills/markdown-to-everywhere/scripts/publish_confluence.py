@@ -204,41 +204,47 @@ def convert_md(md_text, diagram_map):
     lines = md_text.split('\n')
     html = []
     i = 0
-    two_col_active = False
-    two_col_left = []
-    two_col_right = []
-    two_col_side = 'left'
+    col_active = False
+    col_cells = []   # list of lists: each inner list collects HTML fragments for one column
+    col_index = 0    # which column we're currently writing to
 
-    def flush_two_col():
-        nonlocal two_col_active, two_col_left, two_col_right, two_col_side
-        left = ''.join(two_col_left)
-        right = ''.join(two_col_right)
-        result = (f'<ac:layout><ac:layout-section ac:type="two_equal" ac:breakout-mode="default">'
-                  f'<ac:layout-cell>{left}</ac:layout-cell>'
-                  f'<ac:layout-cell>{right}</ac:layout-cell>'
+    def flush_columns():
+        nonlocal col_active, col_cells, col_index
+        n = len(col_cells)
+        if n == 0:
+            col_active = False
+            col_cells = []
+            col_index = 0
+            return ''
+        layout_type = 'two_equal' if n <= 2 else 'three_equal'
+        cells_html = ''.join(
+            f'<ac:layout-cell>{"".join(cell)}</ac:layout-cell>'
+            for cell in col_cells
+        )
+        result = (f'<ac:layout><ac:layout-section ac:type="{layout_type}" ac:breakout-mode="default">'
+                  f'{cells_html}'
                   f'</ac:layout-section></ac:layout>')
-        two_col_active = False
-        two_col_left = []
-        two_col_right = []
-        two_col_side = 'left'
+        col_active = False
+        col_cells = []
+        col_index = 0
         return result
 
     def add(s):
-        if two_col_active:
-            (two_col_left if two_col_side == 'left' else two_col_right).append(s)
+        if col_active:
+            col_cells[col_index].append(s)
         else:
             html.append(s)
 
     while i < len(lines):
         line = lines[i]
 
-        # Two-column markers
+        # Multi-column markers
         if line.strip() == '<!-- columns -->':
-            two_col_active = True; two_col_side = 'left'; i += 1; continue
+            col_active = True; col_cells = [[]]; col_index = 0; i += 1; continue
         if line.strip() == '<!-- col -->':
-            two_col_side = 'right'; i += 1; continue
+            col_cells.append([]); col_index = len(col_cells) - 1; i += 1; continue
         if line.strip() == '<!-- /columns -->':
-            html.append(flush_two_col()); i += 1; continue
+            html.append(flush_columns()); i += 1; continue
 
         # Skip nav footer
         if re.match(r'^\[.+\]\(.+\.md\)\s*\|', line):
@@ -324,8 +330,8 @@ def convert_md(md_text, diagram_map):
         # Paragraph
         add(f'<p>{inline(line)}</p>'); i += 1
 
-    if two_col_active:
-        html.append(flush_two_col())
+    if col_active:
+        html.append(flush_columns())
     return '\n'.join(html)
 
 

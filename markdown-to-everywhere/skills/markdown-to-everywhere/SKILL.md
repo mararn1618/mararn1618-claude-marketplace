@@ -1,6 +1,6 @@
 ---
 name: markdown-to-everywhere
-description: "Markdown to Everywhere: write architecture docs in markdown with status badges, two-column layouts, and draw.io diagram references, then publish to HTML or Confluence Cloud. Use this skill whenever the user wants to write architecture docs, render markdown to HTML, publish docs to Confluence, convert markdown to Confluence storage format, generate draw.io diagrams programmatically from Python, embed diagrams in HTML or Confluence, create status badges, set up a documentation pipeline, or mentions render_html.py, publish_confluence.py, drawio_helpers.py, or the doc pipeline. Also use when the user needs to understand draw.io XML format, mxGraphModel structure, CLI export, edge routing, containers, or style properties."
+description: "Markdown to Everywhere: write architecture docs in markdown with status badges, multi-column layouts (2 or 3 columns), and draw.io diagram references, then publish to HTML or Confluence Cloud. Use this skill whenever the user wants to write architecture docs, render markdown to HTML, publish docs to Confluence, convert markdown to Confluence storage format, generate draw.io diagrams programmatically from Python, embed diagrams in HTML or Confluence, create status badges, set up a documentation pipeline, or mentions render_html.py, publish_confluence.py, drawio_helpers.py, or the doc pipeline. Also use when the user needs to understand draw.io XML format, mxGraphModel structure, CLI export, edge routing, containers, or style properties."
 ---
 
 # Doc Pipeline
