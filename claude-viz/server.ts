@@ -213,7 +213,11 @@ const HTML_PAGE = `<!DOCTYPE html>
   .dash-card-body.light-bg .markdown-container,
   .dash-card-body.light-bg .html-container { color: #1f2328; }
   .dash-card-body.light-bg .markdown-container code { background: rgba(0,0,0,0.08); color: #1f2328; }
-  .dash-card-body.light-bg .markdown-container pre { background: #e6e8eb; }
+  .dash-card-body.light-bg .markdown-container pre { background: #e6e8eb; border-color: #d0d7de; }
+  .dash-card-body.light-bg .markdown-container pre code { color: #1f2328; }
+  .dash-card-body.light-bg .markdown-container th { color: #1f2328; border-color: #d0d7de; }
+  .dash-card-body.light-bg .markdown-container td { color: #656d76; border-color: #d0d7de; }
+  .dash-card-body.light-bg .markdown-container strong { color: #1f2328; }
   .bg-toggle {
     background: none; border: none; color: var(--text-dim);
     cursor: pointer; padding: 2px 4px; font-size: 13px; border-radius: 3px;
@@ -234,20 +238,42 @@ const HTML_PAGE = `<!DOCTYPE html>
     position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
     font-size: 10px; color: var(--text-dim); pointer-events: none; opacity: 0.7;
   }
-  .dash-card-body .markdown-container { line-height: 1.5; font-size: 14px; }
-  .dash-card-body .markdown-container h1 { font-size: 1.4em; margin: 0 0 8px; }
-  .dash-card-body .markdown-container h2 { font-size: 1.2em; margin: 12px 0 6px; color: var(--text); }
+  .dash-card-body .markdown-container { line-height: 1.6; font-size: 14px; }
+  .dash-card-body .markdown-container h1 { font-size: 1.4em; margin: 16px 0 8px; }
+  .dash-card-body .markdown-container h2 { font-size: 1.2em; margin: 14px 0 6px; color: var(--text); }
   .dash-card-body .markdown-container h3 { font-size: 1.05em; margin: 10px 0 4px; color: var(--text-muted); }
-  .dash-card-body .markdown-container p { margin: 0 0 6px; }
-  .dash-card-body .markdown-container ul { padding-left: 20px; margin: 4px 0 8px; }
-  .dash-card-body .markdown-container li { margin: 2px 0; }
+  .dash-card-body .markdown-container p { margin: 0 0 8px; }
+  .dash-card-body .markdown-container ul, .dash-card-body .markdown-container ol { padding-left: 22px; margin: 4px 0 10px; }
+  .dash-card-body .markdown-container li { margin: 3px 0; }
   .dash-card-body .markdown-container code {
-    background: rgba(110,118,129,0.2); padding: 1px 5px; border-radius: 3px; font-size: 0.9em;
+    background: rgba(110,118,129,0.25); padding: 2px 6px; border-radius: 3px; font-size: 0.88em;
+    font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
   }
   .dash-card-body .markdown-container pre {
-    background: var(--bg); padding: 10px; border-radius: 6px; overflow-x: auto; margin: 6px 0;
+    background: var(--bg); padding: 14px; border-radius: 6px; overflow-x: auto; margin: 10px 0;
+    border: 1px solid var(--border);
   }
-  .dash-card-body .markdown-container pre code { background: none; padding: 0; }
+  .dash-card-body .markdown-container pre code {
+    background: none; padding: 0; font-size: 12.5px; line-height: 1.5;
+  }
+  .dash-card-body .markdown-container table {
+    width: 100%; border-collapse: collapse; font-size: 13px; margin: 8px 0;
+  }
+  .dash-card-body .markdown-container th {
+    padding: 6px 10px; border-bottom: 2px solid var(--border); text-align: left; font-weight: 600; color: var(--text);
+  }
+  .dash-card-body .markdown-container td {
+    padding: 5px 10px; border-bottom: 1px solid var(--border); color: var(--text-muted);
+  }
+  .dash-card-body .markdown-container blockquote {
+    border-left: 3px solid var(--accent); margin: 8px 0; padding: 4px 14px; color: var(--text-muted);
+  }
+  .dash-card-body .markdown-container hr {
+    border: none; border-top: 1px solid var(--border); margin: 12px 0;
+  }
+  .dash-card-body .markdown-container strong { color: var(--text); }
+  .dash-card-body .markdown-container a { color: var(--accent); text-decoration: none; }
+  .dash-card-body .markdown-container a:hover { text-decoration: underline; }
 
   /* Empty state */
   .empty-state {
@@ -332,7 +358,9 @@ const HTML_PAGE = `<!DOCTYPE html>
 
 <script type="module">
 import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+import { marked } from 'https://cdn.jsdelivr.net/npm/marked@15/lib/marked.esm.js';
 mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' });
+marked.setOptions({ breaks: false, gfm: true });
 
 const pageListEl = document.getElementById('page-list');
 const sessionFilterEl = document.getElementById('session-filter');
@@ -703,64 +731,7 @@ async function renderCard(card, targetId) {
 })();
 
 function renderMarkdown(md) {
-  // Process blocks: split by double newlines
-  const blocks = md.split(/\\n\\n+/);
-  return blocks.map(block => {
-    // Headings
-    if (/^### /.test(block)) return '<h3>' + block.replace(/^### /, '') + '</h3>';
-    if (/^## /.test(block)) return '<h2>' + block.replace(/^## /, '') + '</h2>';
-    if (/^# /.test(block)) return '<h1>' + block.replace(/^# /, '') + '</h1>';
-    // Code blocks
-    if (/^\\\`\\\`\\\`/.test(block)) {
-      const lines = block.split(/\\n/);
-      return '<pre><code>' + escapeHtml(lines.slice(1, -1).join('\\n')) + '</code></pre>';
-    }
-    // Tables (lines starting with |)
-    if (/^\\|/.test(block)) {
-      const rows = block.split(/\\n/).filter(r => r.trim());
-      if (rows.length < 2) return '<p>' + inlineFormat(block) + '</p>';
-      const isSep = function(r) { return /^\\|?[\\s\\-:]+([\\|][\\s\\-:]+)*\\|?$/.test(r.trim()); };
-      const sepIdx = rows.findIndex((r, i) => i > 0 && isSep(r));
-      const hasHeader = sepIdx === 1;
-      const parseCells = function(row) {
-        return row.replace(/^\\|/, '').replace(/\\|$/, '').split('\\|').map(c => c.trim());
-      };
-      let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;margin:4px 0;">';
-      if (hasHeader) {
-        const hCells = parseCells(rows[0]);
-        html += '<thead><tr>' + hCells.map(c =>
-          '<th style="padding:6px 10px;border-bottom:2px solid var(--border);text-align:left;font-weight:600;color:var(--text);">'
-          + inlineFormat(escapeHtml(c)) + '</th>'
-        ).join('') + '</tr></thead>';
-      }
-      html += '<tbody>';
-      const startIdx = hasHeader ? 2 : 0;
-      for (let ri = startIdx; ri < rows.length; ri++) {
-        if (isSep(rows[ri])) continue;
-        const cells = parseCells(rows[ri]);
-        html += '<tr>' + cells.map(c =>
-          '<td style="padding:5px 10px;border-bottom:1px solid var(--border);color:var(--text-muted);">'
-          + inlineFormat(escapeHtml(c)) + '</td>'
-        ).join('') + '</tr>';
-      }
-      html += '</tbody></table>';
-      return html;
-    }
-    // Lists
-    if (/^- /.test(block)) {
-      const items = block.split(/\\n/).filter(l => l.startsWith('- '));
-      return '<ul>' + items.map(l => '<li>' + inlineFormat(l.replace(/^- /, '')) + '</li>').join('') + '</ul>';
-    }
-    // Paragraph
-    return '<p>' + inlineFormat(block.replace(/\\n/g, ' ')) + '</p>';
-  }).join('');
-}
-
-function inlineFormat(s) {
-  return s
-    .replace(/\\\`([^\\\`]+)\\\`/g, '<code>$1</code>')
-    .replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>')
-    .replace(/\\*(.+?)\\*/g, '<em>$1</em>');
+  return marked.parse(md);
 }
 
 function escapeHtml(s) {
