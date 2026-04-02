@@ -164,10 +164,26 @@ const HTML_PAGE = `<!DOCTYPE html>
   }
   .dash-card {
     background: var(--bg-card); border: 1px solid var(--border);
-    border-radius: var(--radius); overflow: hidden; transition: border-color 0.15s;
+    border-radius: var(--radius); overflow: visible; transition: border-color 0.15s;
+    position: relative;
   }
   .dash-card:hover { border-color: var(--border-highlight); }
   .dash-card.full { grid-column: 1 / -1; }
+
+  /* Resize handles */
+  .resize-handle {
+    position: absolute; left: 0; right: 0; height: 8px; z-index: 10;
+    cursor: ns-resize; display: flex; align-items: center; justify-content: center;
+  }
+  .resize-handle-top { top: -4px; }
+  .resize-handle-bottom { bottom: -4px; }
+  .resize-handle::after {
+    content: ''; width: 40px; height: 3px; border-radius: 2px;
+    background: var(--border); transition: background 0.15s, width 0.15s;
+  }
+  .resize-handle:hover::after, .resize-handle.active::after {
+    background: var(--accent); width: 60px;
+  }
   .dash-card-header {
     padding: 8px 14px; border-bottom: 1px solid var(--border);
     display: flex; align-items: center; justify-content: space-between;
@@ -189,7 +205,7 @@ const HTML_PAGE = `<!DOCTYPE html>
   }
   .dash-card-actions button:hover { background: var(--bg-card-hover); color: var(--text); }
   .dash-card-body {
-    padding: 14px; overflow-x: auto;
+    padding: 14px; overflow: auto;
   }
   .dash-card-body.light-bg {
     background: #f6f8fa; border-radius: 0 0 var(--radius) var(--radius);
@@ -560,7 +576,9 @@ window.selectPage = async function(pageId) {
       + '<button onclick="expandCard(' + i + ')" title="Fullscreen">&#9974;</button>'
       + '<button onclick="copyCard(' + i + ')" title="Copy source">&#128203;</button>'
       + '</div></div>'
-      + '<div class="dash-card-body' + (lightDefault ? ' light-bg' : '') + '"><div class="render-target" id="rt-' + pageId + '-' + i + '"></div></div>';
+      + '<div class="resize-handle resize-handle-top" data-card-idx="' + i + '" data-edge="top"></div>'
+      + '<div class="dash-card-body' + (lightDefault ? ' light-bg' : '') + '"><div class="render-target" id="rt-' + pageId + '-' + i + '"></div></div>'
+      + '<div class="resize-handle resize-handle-bottom" data-card-idx="' + i + '" data-edge="bottom"></div>';
     dashboardEl.appendChild(cardEl);
   }
 
@@ -618,6 +636,71 @@ async function renderCard(card, targetId) {
     }
   }
 }
+
+/* ── Card resize (top + bottom handles) ── */
+(function setupCardResize() {
+  let resizing = null; // { cardBody, startY, startH, edge }
+
+  document.addEventListener('mousedown', function(e) {
+    const handle = e.target.closest('.resize-handle');
+    if (!handle) return;
+    e.preventDefault();
+    const card = handle.closest('.dash-card');
+    if (!card) return;
+    const cardBody = card.querySelector('.dash-card-body');
+    if (!cardBody) return;
+    // Get current height (use computed if not explicitly set)
+    const currentH = cardBody.getBoundingClientRect().height;
+    cardBody.style.height = currentH + 'px';
+    // Also set diagram viewport inside if present
+    const vp = cardBody.querySelector('.diagram-viewport');
+    if (vp) {
+      vp.style.height = (currentH - 28) + 'px'; // subtract padding
+    }
+    resizing = {
+      cardBody: cardBody,
+      viewport: vp,
+      startY: e.clientY,
+      startH: currentH,
+      edge: handle.dataset.edge
+    };
+    handle.classList.add('active');
+    document.body.style.cursor = 'ns-resize';
+    document.body.style.userSelect = 'none';
+  });
+
+  document.addEventListener('mousemove', function(e) {
+    if (!resizing) return;
+    const delta = resizing.edge === 'bottom'
+      ? e.clientY - resizing.startY
+      : resizing.startY - e.clientY;
+    const newH = Math.max(80, resizing.startH + delta);
+    resizing.cardBody.style.height = newH + 'px';
+    if (resizing.viewport) {
+      resizing.viewport.style.height = (newH - 28) + 'px';
+    }
+  });
+
+  document.addEventListener('mouseup', function() {
+    if (!resizing) return;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    document.querySelectorAll('.resize-handle.active').forEach(function(el) {
+      el.classList.remove('active');
+    });
+    // Re-fit diagram if present
+    if (resizing.viewport) {
+      const inner = resizing.viewport.querySelector('.diagram-inner');
+      if (inner) {
+        const targetId = resizing.cardBody.querySelector('.render-target')?.id;
+        if (targetId && cardZoomStates.has(targetId)) {
+          fitDiagramToViewport(resizing.viewport, inner, cardZoomStates.get(targetId));
+        }
+      }
+    }
+    resizing = null;
+  });
+})();
 
 function renderMarkdown(md) {
   // Process blocks: split by double newlines
