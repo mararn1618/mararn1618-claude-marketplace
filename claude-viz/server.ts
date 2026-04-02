@@ -6,7 +6,7 @@
  */
 
 const PORT = parseInt(process.env.CLAUDE_VIZ_PORT || "7891");
-const HOST = "127.0.0.1";
+const HOST = process.env.CLAUDE_VIZ_HOST || "127.0.0.1";
 
 interface Card {
   type: "mermaid" | "kroki" | "html" | "svg" | "markdown";
@@ -199,17 +199,11 @@ const HTML_PAGE = `<!DOCTYPE html>
   .dash-card-body.light-bg .markdown-container code { background: rgba(0,0,0,0.08); color: #1f2328; }
   .dash-card-body.light-bg .markdown-container pre { background: #e6e8eb; }
   .bg-toggle {
-    width: 36px; height: 18px; border-radius: 9px; border: none; padding: 0;
-    background: var(--border); cursor: pointer; position: relative; transition: background 0.2s;
-    display: inline-flex; align-items: center;
+    background: none; border: none; color: var(--text-dim);
+    cursor: pointer; padding: 2px 4px; font-size: 13px; border-radius: 3px;
   }
-  .bg-toggle::after {
-    content: ''; position: absolute; left: 2px; top: 2px;
-    width: 14px; height: 14px; border-radius: 50%;
-    background: var(--text-dim); transition: all 0.2s;
-  }
-  .bg-toggle.light { background: var(--accent); }
-  .bg-toggle.light::after { left: 20px; background: #fff; }
+  .bg-toggle:hover { background: var(--bg-card-hover); color: var(--text); }
+  .bg-toggle.light { color: var(--orange); }
   .dash-card-body .mermaid-container svg { max-width: 100%; height: auto; }
   .dash-card-body .kroki-container img,
   .dash-card-body .kroki-container svg { max-width: 100%; height: auto; }
@@ -561,7 +555,8 @@ window.selectPage = async function(pageId) {
       + (card.title ? '<span class="dash-card-title">' + escapeHtml(card.title) + '</span>' : '')
       + '</div>'
       + '<div class="dash-card-actions">'
-      + '<button class="bg-toggle' + (lightDefault ? ' light' : '') + '" onclick="toggleBg(\\'' + pageId + '\\',' + i + ')" title="Toggle light/dark background"></button>'
+      + '<button class="bg-toggle' + (lightDefault ? ' light' : '') + '" onclick="toggleBg(\\'' + pageId + '\\',' + i + ')" title="Toggle light/dark background">&#9788;</button>'
+      + '<button onclick="popOutCard(' + i + ')" title="Pop out to window">&#8599;</button>'
       + '<button onclick="expandCard(' + i + ')" title="Fullscreen">&#9974;</button>'
       + '<button onclick="copyCard(' + i + ')" title="Copy source">&#128203;</button>'
       + '</div></div>'
@@ -745,6 +740,93 @@ window.copyCard = function(cardIdx) {
   const page = allPages.find(p => p.id === activePageId);
   if (!page || !page.cards[cardIdx]) return;
   navigator.clipboard.writeText(page.cards[cardIdx].content).then(() => showToast('Source copied to clipboard'));
+};
+
+window.popOutCard = function(cardIdx) {
+  const page = allPages.find(p => p.id === activePageId);
+  if (!page || !page.cards[cardIdx]) return;
+  const card = page.cards[cardIdx];
+  const targetId = 'rt-' + activePageId + '-' + cardIdx;
+  const target = document.getElementById(targetId);
+  if (!target) return;
+  const isLight = target.parentElement.classList.contains('light-bg');
+  const isDiagram = card.type === 'mermaid' || card.type === 'kroki' || card.type === 'svg';
+
+  const popup = window.open('', '_blank', 'width=900,height=700,resizable=yes,scrollbars=yes');
+  if (!popup) { showToast('Pop-up blocked by browser'); return; }
+
+  const title = (card.title || page.title || 'Diagram') + ' — Claude Viz';
+  const bgColor = isLight ? '#f6f8fa' : '#0d1117';
+  const textColor = isLight ? '#1f2328' : '#e6edf3';
+
+  let contentHtml = '';
+  if (isDiagram) {
+    const svg = target.querySelector('svg');
+    if (svg) {
+      const clone = svg.cloneNode(true);
+      // Set explicit dimensions from viewBox for proper sizing in popup
+      const vb = svg.viewBox?.baseVal;
+      if (vb && vb.width > 0) {
+        clone.setAttribute('width', String(vb.width));
+        clone.setAttribute('height', String(vb.height));
+      }
+      clone.style.maxWidth = 'none';
+      clone.style.maxHeight = 'none';
+      contentHtml = clone.outerHTML;
+    } else {
+      contentHtml = target.innerHTML;
+    }
+  } else {
+    contentHtml = target.innerHTML;
+  }
+
+  popup.document.write(
+    '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + escapeHtml(title) + '</title>'
+    + '<style>'
+    + '* { box-sizing: border-box; margin: 0; padding: 0; }'
+    + 'body { background:' + bgColor + '; color:' + textColor + '; font-family:-apple-system,BlinkMacSystemFont,sans-serif; height:100vh; display:flex; flex-direction:column; overflow:hidden; }'
+    + '.toolbar { padding:6px 12px; background:rgba(0,0,0,0.15); display:flex; align-items:center; gap:8px; font-size:12px; color:' + textColor + '; border-bottom:1px solid rgba(128,128,128,0.2); flex-shrink:0; }'
+    + '.toolbar button { background:none; border:1px solid rgba(128,128,128,0.3); color:' + textColor + '; padding:3px 10px; border-radius:4px; cursor:pointer; font-size:13px; }'
+    + '.toolbar button:hover { background:rgba(128,128,128,0.2); }'
+    + '.toolbar .title { flex:1; font-weight:500; }'
+    + (isDiagram
+      ? '.viewport { flex:1; overflow:hidden; cursor:grab; position:relative; }'
+        + '.viewport.grabbing { cursor:grabbing; }'
+        + '.diagram-inner { transform-origin:0 0; position:absolute; top:0; left:0; }'
+        + '.diagram-inner svg { max-width:none; max-height:none; display:block; }'
+        + '.hint { position:absolute; bottom:8px; left:50%; transform:translateX(-50%); font-size:11px; color:rgba(128,128,128,0.6); pointer-events:none; }'
+      : '.content { flex:1; overflow:auto; padding:20px; line-height:1.5; font-size:14px; }')
+    + '</style></head><body>'
+    + '<div class="toolbar">'
+    + '<span class="title">' + escapeHtml(card.title || page.title) + '</span>'
+    + (isDiagram ? '<button onclick="zoomIn()">+</button><button onclick="zoomOut()">\\u2212</button><button onclick="resetView()">Fit</button>' : '')
+    + '<button onclick="toggleBg()">\\u263C</button>'
+    + '</div>'
+    + (isDiagram
+      ? '<div class="viewport" id="vp"><div class="diagram-inner" id="di">' + contentHtml + '</div><div class="hint">Scroll to zoom \\u00b7 Drag to pan</div></div>'
+      : '<div class="content">' + contentHtml + '</div>')
+    + '<script>'
+    + 'var isLight = ' + (isLight ? 'true' : 'false') + ';'
+    + 'function toggleBg() { isLight = !isLight; document.body.style.background = isLight ? "#f6f8fa" : "#0d1117"; document.body.style.color = isLight ? "#1f2328" : "#e6edf3"; }'
+    + (isDiagram ? ''
+      + 'var state = { scale:1, tx:0, ty:0, dragging:false, sx:0, sy:0, stx:0, sty:0 };'
+      + 'var vp = document.getElementById("vp");'
+      + 'var di = document.getElementById("di");'
+      + 'function apply() { di.style.transform = "translate("+state.tx+"px,"+state.ty+"px) scale("+state.scale+")"; }'
+      + 'function fit() { var svg = di.querySelector("svg"); if(!svg) return; var r = vp.getBoundingClientRect(); var vb = svg.viewBox&&svg.viewBox.baseVal&&svg.viewBox.baseVal.width>0?svg.viewBox.baseVal:null; var w = vb?vb.width:(svg.getAttribute("width")?parseFloat(svg.getAttribute("width")):svg.getBoundingClientRect().width/state.scale); var h = vb?vb.height:(svg.getAttribute("height")?parseFloat(svg.getAttribute("height")):svg.getBoundingClientRect().height/state.scale); if(w>0&&h>0&&r.width>0&&r.height>0){ state.scale=Math.min(r.width/w,r.height/h)*0.92; state.tx=(r.width-w*state.scale)/2; state.ty=(r.height-h*state.scale)/2; apply(); } }'
+      + 'vp.addEventListener("wheel",function(e){ e.preventDefault(); var r=vp.getBoundingClientRect(); var mx=e.clientX-r.left; var my=e.clientY-r.top; var f=e.deltaY<0?1.15:1/1.15; var ns=Math.min(Math.max(state.scale*f,0.05),20); state.tx=mx-(mx-state.tx)*(ns/state.scale); state.ty=my-(my-state.ty)*(ns/state.scale); state.scale=ns; apply(); },{passive:false});'
+      + 'vp.addEventListener("mousedown",function(e){ state.dragging=true; state.sx=e.clientX; state.sy=e.clientY; state.stx=state.tx; state.sty=state.ty; vp.classList.add("grabbing"); });'
+      + 'window.addEventListener("mousemove",function(e){ if(!state.dragging)return; state.tx=state.stx+(e.clientX-state.sx); state.ty=state.sty+(e.clientY-state.sy); apply(); });'
+      + 'window.addEventListener("mouseup",function(){ state.dragging=false; vp.classList.remove("grabbing"); });'
+      + 'function zoomIn(){ state.scale=Math.min(state.scale*1.3,20); apply(); }'
+      + 'function zoomOut(){ state.scale=Math.max(state.scale/1.3,0.05); apply(); }'
+      + 'function resetView(){ state={scale:1,tx:0,ty:0,dragging:false,sx:0,sy:0,stx:0,sty:0}; fit(); }'
+      + 'setTimeout(fit, 50);'
+      + 'window.addEventListener("resize",function(){ fit(); });'
+      : '')
+    + '</scr' + 'ipt></body></html>'
+  );
+  popup.document.close();
 };
 
 window.copyPath = function(e, path) {
@@ -936,3 +1018,25 @@ const server = Bun.serve({
 });
 
 console.log(`Claude Viz server running at http://${HOST}:${PORT}`);
+
+// Print network addresses when bound to all interfaces
+if (HOST === "0.0.0.0") {
+  try {
+    const { networkInterfaces } = await import("os");
+    const nets = networkInterfaces();
+    const addresses: string[] = [];
+    for (const [name, ifaces] of Object.entries(nets)) {
+      if (!ifaces) continue;
+      for (const iface of ifaces) {
+        if (iface.family === "IPv4" && !iface.internal) {
+          addresses.push(`  http://${iface.address}:${PORT}  (${name})`);
+        }
+      }
+    }
+    if (addresses.length > 0) {
+      console.log("Available on the network:");
+      for (const addr of addresses) console.log(addr);
+    }
+  } catch {}
+}
+console.log(`  http://127.0.0.1:${PORT}  (localhost)`);
