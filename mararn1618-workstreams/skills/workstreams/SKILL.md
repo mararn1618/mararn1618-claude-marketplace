@@ -154,3 +154,76 @@ Run (the skill consumer — i.e. you — runs this when needed):
 find . -maxdepth 3 -name worklog.md -mtime +30 -not -path "./_archive/*"
 ```
 Each path printed is a stale workstream. Stale threshold is 30 days — if you want to change it, edit this number in your local copy of this skill.
+
+## Runtime protocol — discipline rules (rigid, non-negotiable)
+
+These rules apply during work, on every turn. They are the reason a fresh session can pick up where an old one left off. Do not rationalise skipping them.
+
+### Rule 1 — `worklog.md`: append after every state-changing turn, before ending the turn
+
+A turn is "state-changing" if any of these are true:
+
+- You ran a command (shell, tool) that modified something on disk, in git, or in an external system.
+- You or the user made a decision (even a small one).
+- You learned something new from the user's message that affects the work (scope, constraint, preference, fact).
+- You completed a task or sub-task.
+
+When a turn is state-changing, append one line to `worklog.md` **before you finish responding**, in this format:
+
+```
+- <ISO timestamp> — <one short sentence>
+```
+
+One line. No paragraphs. If the thing is complex, split it into multiple lines but keep each line short.
+
+**Red flags — if you catch yourself thinking any of these, STOP and write the entry now:**
+
+| Thought | Reality |
+|---|---|
+| "I'll note this in the worklog at the end of the task" | The session can die before "the end of the task". Write now. |
+| "This change is too small to log" | Small changes are the ones that get lost. Write now. |
+| "I'll batch several entries into one" | Batching loses the order and the timestamps. One line per event. |
+| "The user can see what I did from my response" | They can't, in a fresh session. Write now. |
+| "I already mentioned it in my message" | Your message is not on disk. The worklog is. Write now. |
+
+### Rule 2 — `decisions.md`: append on every non-trivial choice
+
+Whenever you or the user picks between alternatives in a way that will affect future work, append an entry to `decisions.md`. Format:
+
+```markdown
+## YYYY-MM-DD — <decision headline>
+<1–3 short lines of rationale — why this, not the alternative>
+```
+
+A "non-trivial choice" is one where, three months from now, a fresh session would benefit from knowing *why* this path was taken. Examples: choosing a library, scoping a feature in or out, committing to a data format, deciding not to do something. Not everything is a decision — "I'll use the same indentation style as the file" is not.
+
+### Rule 3 — `README.md`: propose changes, never silently rewrite
+
+The README is user-owned. It is the first file a fresh session reads and it must stay trustworthy.
+
+- If the stated goals or scope in the README still match what you are doing, leave it alone.
+- If you notice reality has drifted from the README (e.g. the README says the goal is X but you have been working on Y for several turns, or the user has explicitly redirected scope), surface this to the user with a specific proposal:
+  *"The README still says the goal is X, but we've been working on Y. Want me to update the goals section to say `<proposed text>`?"*
+- Only write to `README.md` after the user confirms. Then append a worklog entry recording the update.
+
+### Rule 4 — `context/input/`: every handed-over file gets a dated filename
+
+When the user hands you a file (paste, attachment, explicit "save this"), save it to `<workstream>/context/input/` with the filename prefixed `YYYY-MM-DD_`. Use today's date. Preserve the original name and extension after the prefix. Example: user sends `meeting_notes.txt` on 2026-04-14 → save as `2026-04-14_meeting_notes.txt`.
+
+Do not drop inputs in the workstream root, in `context/`, or anywhere else. Do not rename the original portion of the filename beyond prefixing the date.
+
+After saving, append a worklog entry: `- <ISO ts> — saved input ./context/input/<dated-filename>`.
+
+### Rule 5 — Workstream switching: treat as a conscious reset
+
+When the user switches from workstream A to workstream B within the same session, you **must** treat it as a reset. This rule exists because mid-session context clearing (`/clear`) is not available in every interface channel — for example, in the Discord plugin, the user cannot send harness commands. The skill must work correctly regardless.
+
+On a switch:
+
+1. Before leaving A: make sure A's worklog and any pending decisions are written.
+2. Re-read B's `README.md` in full.
+3. Tail B's `worklog.md`.
+4. Read B's `decisions.md` in full.
+5. Do not carry A's working state into B's turns. If something from A becomes relevant later, look it up from A's on-disk files — do not recall it from the conversation window.
+
+Assume you have to earn B's context from disk, not from memory. If you catch yourself answering a B question using facts you remember from A without checking the files, stop and check the files.
