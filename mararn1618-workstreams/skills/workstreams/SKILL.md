@@ -45,3 +45,9 @@ _(none yet — add entries as workstreams are created)_
 
 _(none yet)_
 ```
+
+### Verification after scaffolding
+
+- `ls -la` at the root shows `CLAUDE.md` and `_archive/`.
+- `cat CLAUDE.md` shows the gate paragraph at the top.
+- Report to the user: "Scaffolded the folder. Next time you start a session here, the gate will force the skill to load. Tell me about the first topic you want to work on and I'll create a workstream for it."
