@@ -227,3 +227,39 @@ On a switch:
 5. Do not carry A's working state into B's turns. If something from A becomes relevant later, look it up from A's on-disk files — do not recall it from the conversation window.
 
 Assume you have to earn B's context from disk, not from memory. If you catch yourself answering a B question using facts you remember from A without checking the files, stop and check the files.
+
+## Archiving action
+
+Triggered by either the session-start bulk prompt (Step 7 of session-start protocol) or an explicit user request like "archive the X workstream".
+
+For each workstream to archive:
+
+1. **Move the folder** into `_archive/`, preserving its name.
+   ```bash
+   git mv <YYYY-MM-slug> _archive/<YYYY-MM-slug>
+   ```
+   If the folder is not tracked by git, use `mv` instead. Always move the whole folder as a single unit — do not leave artifacts behind.
+
+2. **Update `CLAUDE.md`:**
+   - Remove the entry from the `## Active workstreams` list.
+   - Add it to the `## Archived (_archive/)` list with the same one-line hook.
+
+3. **Append a worklog entry to the archived workstream's own `worklog.md`** before you stop working on it, so the archive has a final dated marker:
+   ```
+   - <ISO ts> — archived (no activity >30 days / user requested)
+   ```
+
+4. **Report to the user** which workstreams were moved.
+
+### Reviving from archive
+
+If the user asks to resume an archived workstream:
+
+1. Move it back out of `_archive/` to the root.
+2. Update `CLAUDE.md`: move its entry from Archived back to Active.
+3. Append a worklog entry: `- <ISO ts> — revived from archive`.
+4. Proceed as if resuming an active workstream (read README, tail worklog, read decisions).
+
+### Threshold
+
+Stale threshold for the bulk archive prompt is **30 days** (based on `worklog.md` mtime). This is hard-coded in this skill. If you want to change it, edit the `-mtime +30` value in the mtime check under the session-start protocol and here for consistency.
