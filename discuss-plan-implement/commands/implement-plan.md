@@ -79,11 +79,14 @@ For each group that has unchecked tasks:
 When a teammate reports completion:
 - Edit the plan file: change that task's `- [ ]` to `- [x]`.
 - Append to Progress Log: `- <ISO timestamp> — T<n>: <summary from teammate>`.
+- **Then immediately dismiss the reporting teammate** by sending them `{"type": "shutdown_request", "reason": "task complete"}` via SendMessage. This is per-teammate, not broadcast. Keep the pending-shutdown set at O(1); do not accumulate idle teammates waiting for a batched shutdown at the end of the run. Why: in practice, shutdown_request messages sent to already-idle teammates at end-of-run can sit in the inbox for many minutes before being processed, during which `TeamDelete` fails and the session stays registered as active. Dismissing immediately, in the same parent turn where the teammate's completion message is handled, avoids that zombie window.
 
 When a teammate reports blocked:
+- **Immediately dismiss the blocked teammate** by sending them `{"type": "shutdown_request", "reason": "blocked, retrying with fresh teammate"}` via SendMessage, for the same reason as above. Do not leave blocked zombies around either.
 - Spawn a fresh teammate for the same task (retry once). If it also reports blocked:
   - Mark the task with `⚠️` instead of `[x]` in the plan.
   - Append to Progress Log: `- <ISO timestamp> — T<n>: BLOCKED — <reason>`.
+  - Immediately dismiss that retry teammate the same way.
   - Continue with remaining tasks in the group.
 
 ### 1d. Advance groups
@@ -92,9 +95,11 @@ When all teammates in the current group have reported (or been skipped), move to
 
 ### 1e. Shut down implementer team
 
-After all groups are processed:
-- DM all remaining teammates: `{"type": "shutdown_request"}` via SendMessage.
+After all groups are processed, all teammates should already have been dismissed individually in 1c as they completed (or were replaced). Do NOT broadcast another round of shutdown_requests here; that is exactly the batched-at-end pattern 1c is designed to avoid.
+
+- Wait briefly for any outstanding `shutdown_approved` acks to land.
 - Call `TeamDelete`.
+- If `TeamDelete` returns a `Cannot cleanup team with N active member(s)` error, DM the still-active teammates individually with `{"type": "shutdown_request", "reason": "team cleanup"}` and retry `TeamDelete` after they ack.
 
 ## Step 2 — Phase B: Advisor team (clean context)
 
@@ -162,6 +167,8 @@ Monitor your inbox for a DM from `advisor`. Expected outcomes:
 - `"APPROVED: <summary>"` — loop completed successfully.
 - `"MAX ROUNDS EXCEEDED: <unresolved issues>"` — loop exhausted.
 
+**When the verdict arrives, in the same parent turn**, immediately dismiss both the advisor and the fixer (if fixer is still alive) by sending each one `{"type": "shutdown_request", "reason": "verdict delivered"}` via SendMessage. Same reasoning as step 1c: batching these at end-of-run can leave idle teammates stuck with unprocessed shutdowns for many minutes, blocking `TeamDelete` and keeping the session registered as active.
+
 ### 2e. Update plan with verdict
 
 - On **APPROVED**: append to Progress Log: `- <ISO timestamp> — Advisor APPROVED: <summary>`. Check off each `Advisor Checks` bullet and each `Acceptance Criteria` bullet.
@@ -169,8 +176,11 @@ Monitor your inbox for a DM from `advisor`. Expected outcomes:
 
 ### 2f. Shut down advisor team
 
-- DM remaining teammates: `{"type": "shutdown_request"}` via SendMessage.
+Advisor and fixer should already have been dismissed in 2d when the verdict landed. Do NOT broadcast another round of shutdown_requests here.
+
+- Wait briefly for any outstanding `shutdown_approved` acks to land.
 - Call `TeamDelete`.
+- If `TeamDelete` returns a `Cannot cleanup team with N active member(s)` error, DM the still-active teammates individually with `{"type": "shutdown_request", "reason": "team cleanup"}` and retry `TeamDelete` after they ack.
 
 ## Step 3 — Phase C: Report to human
 
