@@ -75,6 +75,12 @@
       "source": "./mararn1618-kleinanzeigen",
       "description": "Create optimized kleinanzeigen.de listings from photos and a brief description. Researches the product via Vision and web search, builds a validated pricing strategy, selects and sorts photos, and generates a ready-to-post German listing using Generator/Adversary agent teams.",
       "version": "0.1.0"
+    },
+    {
+      "name": "mararn1618-workstreams",
+      "source": "./mararn1618-workstreams",
+      "description": "Turn any folder into a stateless, resumable Claude workspace: per-topic workstream folders with worklog, decisions, dated inputs, and a self-maintained CLAUDE.md index. Kill the session anytime, resume from disk.",
+      "version": "0.1.0"
     }
   ]
 }
