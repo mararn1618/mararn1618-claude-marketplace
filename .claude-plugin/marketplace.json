@@ -81,6 +81,12 @@
       "source": "./mararn1618-workstreams",
       "description": "Turn any folder into a stateless, resumable Claude workspace: per-topic workstream folders with worklog, decisions, dated inputs, and a self-maintained CLAUDE.md index. Kill the session anytime, resume from disk.",
       "version": "0.1.0"
+    },
+    {
+      "name": "discuss-plan-implement",
+      "source": "./discuss-plan-implement",
+      "description": "Minimal discuss -> plan -> implement workflow for one story at a time. Phase C uses Claude Code Teams for parallel implementers and a clean-context advisor/fixer GAN verification loop.",
+      "version": "0.1.0"
     }
   ]
 }
