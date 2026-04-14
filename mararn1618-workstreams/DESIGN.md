@@ -24,6 +24,14 @@ A marketplace skill that turns any folder into a stateless, resumable workspace 
 
 Memory-related ideas from the original braindump are deferred. They can be revisited in a future version if worklog/decisions on their own prove insufficient.
 
+## Interface constraints
+
+The skill must work in interface channels that do not expose Claude Code harness commands. The primary example is the Discord plugin: messages arrive as regular channel messages, so neither the user nor the agent can invoke `/clear` or any other harness slash command mid-session. The agent also has no tool to clear its own context window.
+
+Implication: mid-session context clearing is not available in every channel the user may speak through. The skill's on-disk protocol must therefore be strong enough that the agent can re-orient correctly regardless of whether context was cleared. Both failure modes — session died, or session accumulated stale context — are handled by the same mechanism: trust the disk, re-read the workstream files, do not rely on prior turns.
+
+This constraint motivates the workstream switching rule in the Runtime protocol below.
+
 ## Scaffold
 
 The skill exposes a setup action that, given a root folder, creates:
@@ -134,6 +142,8 @@ These are enforceable rules, not suggestions. The skill surfaces them as a short
 **README.md — propose, never silently rewrite.** If the agent notices reality has drifted from the stated goals (e.g. we've been doing Y for three turns but README says goal is X), it surfaces this to the user: *"the README goals seem out of date, want me to update to reflect Y?"* and writes only on confirmation. Rationale: the README is the anchor a fresh session reads first, so it must stay trustworthy.
 
 **context/input/ — always dated.** Any file handed over by the user is saved here with a `YYYY-MM-DD_` filename prefix. The skill enforces this whenever saving from user input.
+
+**Workstream switching — treat as a conscious reset.** When the user switches from workstream A to workstream B within the same session, re-read B's `README.md`, tail B's `worklog.md`, and read B's `decisions.md`. Do not carry A's working state into B's turns. If something from A is relevant later, look it up from A's on-disk files rather than recalling it from the conversation. Assume you have to earn B's context from disk, not from memory. This rule exists because mid-session context clearing is not available in every interface channel (see Interface constraints).
 
 ### Archiving action
 
