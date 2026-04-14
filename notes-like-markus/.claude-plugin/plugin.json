@@ -1,0 +1,9 @@
+{
+  "name": "notes-like-markus",
+  "description": "Voice reference for agent-produced notes. Writes fleeting notes, meeting alignments, ticket scratchpads, and daily summaries in a terse human voice instead of verbose AI prose.",
+  "version": "0.1.0",
+  "author": {
+    "name": "mararn1618"
+  },
+  "repository": "https://github.com/mararn1618/mararn1618-claude-marketplace"
+}

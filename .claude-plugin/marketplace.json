@@ -61,7 +61,7 @@
     {
       "name": "mararn1618-home-assistant",
       "source": "./mararn1618-home-assistant",
-      "description": "Personal Home Assistant setup profile — connection details, room layout, devices, integrations, and session workflow",
+      "description": "Personal Home Assistant setup profile: connection details, room layout, devices, integrations, and session workflow",
       "version": "0.1.0"
     },
     {
@@ -86,6 +86,12 @@
       "name": "discuss-plan-implement",
       "source": "./discuss-plan-implement",
       "description": "Minimal discuss -> plan -> implement workflow for one story at a time. Phase C uses Claude Code Teams for parallel implementers and a clean-context advisor/fixer GAN verification loop.",
+      "version": "0.1.0"
+    },
+    {
+      "name": "notes-like-markus",
+      "source": "./notes-like-markus",
+      "description": "Voice reference for agent-produced notes. Writes fleeting notes, meeting alignments, ticket scratchpads, and daily summaries in a terse human voice instead of verbose AI prose.",
       "version": "0.1.0"
     }
   ]
