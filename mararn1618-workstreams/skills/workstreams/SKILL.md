@@ -117,3 +117,40 @@ Multi-user access is in scope. SQLite's writer lock would block the second user.
 **`context/input/`** — every file the user hands over lands here, prefixed with the date: `YYYY-MM-DD_<original-name>.<ext>`. This applies to transcripts, emails, screenshots, PDFs, anything. Do not drop inputs in the workstream root or elsewhere.
 
 No `context/output/` folder in v1. Generated artifacts (source code, reports) land wherever the task naturally puts them. The worklog records what was produced and where, so a fresh session can find it.
+
+## Runtime protocol — on the first user message of a session
+
+Follow these steps in order. Do not skip.
+
+1. **Read `CLAUDE.md`** at the root of the workstreams folder. Pay attention to the Active workstreams and Archived sections.
+
+2. **Triviality check.** If the user's message is a quick factual question, chitchat, or otherwise has no continuation and does not touch any existing workstream topic, skip workstream logic entirely and answer directly. Do not create a workstream for trivial things. Examples of trivial: "what time is it?", "hi", "can you explain regex?". Examples of non-trivial: "let's continue the latency work", "I got a transcript from the meeting with Alex", "I want to start figuring out X".
+
+3. **Topic match.** If non-trivial, scan the Active workstreams index for plausible matches with the user's topic. Look at the slugs and the one-line hooks.
+
+4. **Confirm before acting.**
+   - If one workstream plausibly matches: ask the user in plain language, *"Is this about the `<slug>` workstream?"*. Wait for confirmation. Do not assume.
+   - If nothing plausibly matches but the topic seems substantial: ask the user, *"This looks like a new topic. Should I start a new workstream for it?"*. Wait for confirmation.
+   - If the user's message explicitly names an archived workstream: ask whether they want to revive it from `_archive/` or keep it archived and branch a new workstream.
+
+5. **On confirmed existing workstream:** read the workstream's `README.md` in full, read the tail (last ~30 lines) of `worklog.md`, and read `decisions.md` in full. Then proceed with the user's request using that loaded context.
+
+6. **On confirmed new workstream:**
+   a. Ask the user for a short slug (lowercase, hyphen-separated).
+   b. Compute today's `YYYY-MM` prefix and create the folder `YYYY-MM-<slug>/`.
+   c. Ask the user for a short description and at least one goal (and optional non-goals) — write these into `README.md` using the template in the Workstream folder layout section.
+   d. Create empty `worklog.md` and `decisions.md` with just their `# Worklog` / `# Decisions` headers.
+   e. Create `context/input/` (empty directory — use `.gitkeep` if the folder is under git).
+   f. Update `CLAUDE.md`: add the new workstream to the Active workstreams list with a one-line hook (one sentence summarizing the topic).
+   g. Append the first worklog entry: `- <ISO timestamp> — created workstream`.
+   h. Report to the user what was created.
+
+7. **Archive check.** After steps 1–6, check every active workstream's `worklog.md` mtime. If any are older than 30 days, surface a single prompt: *"These workstreams haven't been touched in >30 days: X, Y, Z. Archive them? [y/N]"*. Do this at most once per session and only at session start. If the user says yes, follow the Archiving action section for each.
+
+### How to check mtimes
+
+Run (the skill consumer — i.e. you — runs this when needed):
+```bash
+find . -maxdepth 3 -name worklog.md -mtime +30 -not -path "./_archive/*"
+```
+Each path printed is a stale workstream. Stale threshold is 30 days — if you want to change it, edit this number in your local copy of this skill.
