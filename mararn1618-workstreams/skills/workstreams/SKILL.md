@@ -51,3 +51,69 @@ _(none yet)_
 - `ls -la` at the root shows `CLAUDE.md` and `_archive/`.
 - `cat CLAUDE.md` shows the gate paragraph at the top.
 - Report to the user: "Scaffolded the folder. Next time you start a session here, the gate will force the skill to load. Tell me about the first topic you want to work on and I'll create a workstream for it."
+
+## Workstream folder layout
+
+Every workstream is a sibling directory at the root of the workstreams folder. The layout is:
+
+```
+YYYY-MM-<topic-slug>/
+├── README.md          # description, goals, optional non-goals (user-owned)
+├── worklog.md         # append-only, one ISO-timestamped line per entry
+├── decisions.md       # append-only, 2-4 line entries
+└── context/input/     # user-provided inputs, filename-prefixed with YYYY-MM-DD_
+```
+
+### Naming rules
+
+- Folder name: `YYYY-MM-<slug>/`. Year-month prefix is the month the workstream was created, based on today's date at the time of creation. Slug is lowercase, hyphen-separated, derived from the topic. Ask the user to confirm the slug before creating.
+- No `workstream_` or other prefix — the root folder contains only workstreams, `_archive/`, and `CLAUDE.md`, so the prefix would be redundant.
+- Input filenames: `YYYY-MM-DD_<original-name>.<ext>`. Date is the date the input was handed over (today, when saving). Preserve the original extension.
+
+### File roles
+
+**`README.md`** — canonical description of the workstream. Structure:
+
+```markdown
+# <Topic title>
+
+## Description
+
+Short paragraph describing what this workstream is about.
+
+## Goals
+
+- First goal
+- Second goal
+
+## Non-goals (optional)
+
+- Explicit thing this workstream is NOT about
+```
+
+The README is **user-owned**. You may propose updates but must not silently rewrite it. See the discipline rules below.
+
+**`worklog.md`** — append-only diary. Header at top is `# Worklog`. Each entry is one line, ISO-timestamped, starting with `- `. Example:
+
+```markdown
+# Worklog
+
+- 2026-04-14T10:23Z — created workstream, stubbed README with goal: investigate latency regression
+- 2026-04-14T10:41Z — ran `./bench.sh`, baseline saved to ./out/baseline.csv
+- 2026-04-14T10:55Z — user clarified scope: only EU markets, not NA
+```
+
+The ISO timestamp format is `YYYY-MM-DDTHH:MMZ` (UTC, minute precision — seconds are noise). If you do not know the current time, read it from the environment (`date -u +%Y-%m-%dT%H:%MZ`) before writing the entry.
+
+**`decisions.md`** — append-only decision log. Header at top is `# Decisions`. Each entry is a `## YYYY-MM-DD — <decision headline>` section followed by one to three short lines of rationale. Example:
+
+```markdown
+# Decisions
+
+## 2026-04-14 — use Postgres, not SQLite
+Multi-user access is in scope. SQLite's writer lock would block the second user. Postgres adds an ops dependency but it is already part of the stack.
+```
+
+**`context/input/`** — every file the user hands over lands here, prefixed with the date: `YYYY-MM-DD_<original-name>.<ext>`. This applies to transcripts, emails, screenshots, PDFs, anything. Do not drop inputs in the workstream root or elsewhere.
+
+No `context/output/` folder in v1. Generated artifacts (source code, reports) land wherever the task naturally puts them. The worklog records what was produced and where, so a fresh session can find it.
