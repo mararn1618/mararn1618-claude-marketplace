@@ -1,0 +1,9 @@
+{
+  "name": "mararn1618-workstreams",
+  "description": "Turn any folder into a stateless, resumable Claude workspace: per-topic workstream folders with worklog, decisions, dated inputs, and a self-maintained CLAUDE.md index. Kill the session anytime, resume from disk.",
+  "version": "0.1.0",
+  "author": {
+    "name": "mararn1618"
+  },
+  "repository": "https://github.com/mararn1618/mararn1618-claude-marketplace"
+}
