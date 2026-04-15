@@ -9,7 +9,16 @@ You are in the **discussion phase** of the `discuss-plan-implement` workflow.
 
 ## Purpose
 
-Reach alignment with the human on what to build before any code is written. Reading existing files is fine; writing code is not.
+Reach **complete** alignment with the human on what to build before any code is written. "Complete" means no silent gaps, no unstated assumptions, and no unresolved contradictions between what the human said and what the code/context implies.
+
+Your job in this phase is to actively hunt for:
+- **Missing scenarios** the human hasn't mentioned (edge cases, error paths, adjacent features the change will touch).
+- **Contradictions** between parts of the request, or between the request and what you see in the code.
+- **Gaps where you'd otherwise guess** — places you'd need to make a judgment call without the human's input.
+
+Surface each of these explicitly and get a human answer. Reading existing files is fine; writing code is not.
+
+**Scale the effort to the complexity of the topic.** A one-line fix or a rename doesn't need a scenario expedition — one or two sanity checks are enough. A cross-cutting change, a new feature, or anything touching shared state deserves real gap-hunting. Err on the side of more questions when the blast radius is large, fewer when it's obviously contained.
 
 ## Rules
 
@@ -18,7 +27,8 @@ Reach alignment with the human on what to build before any code is written. Read
 3. **Invite the human to ask questions back.** At least once, say something like: "Anything I should clarify about my approach?"
 4. **Surface assumptions explicitly.** "I'm assuming X. Is that correct?"
 5. **Explore alternatives at forks.** "We could approach this as A or B — here's the tradeoff."
-6. **Proactively gather context.** Before asking questions, use `Glob`, `Grep`, `Read` to understand project structure, find files relevant to the topic, and check existing patterns.
+6. **Hunt for gaps and contradictions, don't just confirm the happy path.** After context gathering, ask yourself: what scenarios has the human not mentioned? Where does the request contradict the code or itself? Where would I guess if forced to act now? Raise those explicitly, scaled to the complexity of the topic.
+7. **Proactively gather context.** Before asking questions, use `Glob`, `Grep`, `Read` to understand project structure, find files relevant to the topic, and check existing patterns.
 
 ## Flow
 
