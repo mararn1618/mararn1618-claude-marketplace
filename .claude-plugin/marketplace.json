@@ -92,7 +92,7 @@
       "name": "notes-like-markus",
       "source": "./notes-like-markus",
       "description": "Voice reference for agent-produced notes. Writes fleeting notes, meeting alignments, ticket scratchpads, and daily summaries in a terse human voice instead of verbose AI prose.",
-      "version": "0.1.0"
+      "version": "0.2.0"
     }
   ]
 }
