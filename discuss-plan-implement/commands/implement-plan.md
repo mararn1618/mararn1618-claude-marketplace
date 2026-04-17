@@ -22,7 +22,7 @@ Execute the approved plan by:
 
 ## Step 0 — Load and parse the plan
 
-1. List `docs/plans/` and load the most recent plan file by filename date. If multiple share the latest date, list them and ask the human which to use.
+1. List `docs/plans/` and load the most recent plan file by filename date+time (filenames sort lexicographically in chronological order). If multiple files tie, list them and ask the human which to use.
 2. Parse the YAML frontmatter and body. Extract:
    - `story`
    - `discussion` (path for reference)

@@ -1,5 +1,5 @@
 ---
-description: "Turn a discussion summary into an executable plan with parallelism-annotated tasks. Writes to docs/plans/YYYY-MM-DD-<slug>.md."
+description: "Turn a discussion summary into an executable plan with parallelism-annotated tasks. Writes to docs/plans/YYYY-MM-DD_HH-MM_<slug>.md."
 model: opus
 ---
 
@@ -13,7 +13,7 @@ Turn the most recent discussion summary into a concrete, executable plan with ta
 
 ## Flow
 
-1. **Find the input discussion.** Look at `docs/discussions/` and load the most recent file (by filename date, newest first). If multiple files share the latest date, list them and ask the human which to use. If there are no discussion files, ask the human to run `/discuss-plan-implement:discuss` first or describe the story inline.
+1. **Find the input discussion.** Look at `docs/discussions/` and load the most recent file (by filename date+time, newest first — filenames sort lexicographically in chronological order). If multiple files tie, list them and ask the human which to use. If there are no discussion files, ask the human to run `/discuss-plan-implement:discuss` first or describe the story inline.
 
 2. **Extract inherited sections.** Copy the following sections **verbatim** from the discussion into the plan — these are the single source of truth, do not paraphrase:
    - `Acceptance Criteria`
@@ -33,7 +33,7 @@ Turn the most recent discussion summary into a concrete, executable plan with ta
 
 5. **Draft Advisor Checks** — additional checks the final advisor should verify, beyond acceptance criteria. Examples: "All tasks marked complete", "Tests pass: <command>", project-specific style rules.
 
-6. **Write the plan file** to `docs/plans/YYYY-MM-DD-<slug>.md`. Use the same slug as the discussion file. Create the directory if needed. If a plan already exists for this slug, ask the human: overwrite or use a new slug.
+6. **Write the plan file** to `docs/plans/YYYY-MM-DD_HH-MM_<slug>.md` using the current local date+time and the same `<slug>` as the discussion file. Create the directory if needed. If a plan already exists for this slug (check `docs/plans/*_<slug>.md`), ask the human: overwrite the existing one or write a new timestamped file alongside it.
 
 7. **Present the plan inline** and ask the human to review. If changes are requested, edit the file and re-present.
 
@@ -46,8 +46,8 @@ File format (exact structure, frontmatter required):
 ```markdown
 ---
 story: "<one-line story statement from discussion>"
-discussion: docs/discussions/YYYY-MM-DD-<slug>.md
-created: <YYYY-MM-DD>
+discussion: docs/discussions/YYYY-MM-DD_HH-MM_<slug>.md
+created: <YYYY-MM-DD HH:MM>
 max_advisor_rounds: 3
 ---
 

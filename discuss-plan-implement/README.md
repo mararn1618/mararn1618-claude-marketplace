@@ -8,8 +8,8 @@ Three explicit slash commands, zero always-on context cost, file-based state tha
 
 | Command | Purpose | Output |
 |---|---|---|
-| `/discuss-plan-implement:discuss` | Bilateral alignment conversation. No code is written. | `docs/discussions/YYYY-MM-DD-<slug>.md` |
-| `/discuss-plan-implement:create-plan` | Turn a discussion into a concrete executable plan with parallelism annotations. | `docs/plans/YYYY-MM-DD-<slug>.md` |
+| `/discuss-plan-implement:discuss` | Bilateral alignment conversation. No code is written. | `docs/discussions/YYYY-MM-DD_HH-MM_<slug>.md` |
+| `/discuss-plan-implement:create-plan` | Turn a discussion into a concrete executable plan with parallelism annotations. | `docs/plans/YYYY-MM-DD_HH-MM_<slug>.md` |
 | `/discuss-plan-implement:implement-plan` | Execute the plan using two sequential Claude Code Teams: an Implementer team for parallel task execution, then a clean-context Advisor team for GAN-style verification. | Code changes + updated plan file with Progress Log |
 
 ## Workflow
@@ -18,13 +18,13 @@ Three explicit slash commands, zero always-on context cost, file-based state tha
 /discuss-plan-implement:discuss
         |
         v
-docs/discussions/2026-04-14-my-story.md
+docs/discussions/2026-04-14_09-30_my_story.md
         |
         v
 /discuss-plan-implement:create-plan
         |
         v
-docs/plans/2026-04-14-my-story.md
+docs/plans/2026-04-14_10-15_my_story.md
         |
         v
 /discuss-plan-implement:implement-plan
@@ -80,4 +80,4 @@ They coexist; pick based on the shape of the work.
 
 ## Version
 
-**0.1.0** — Initial release.
+**0.3.0** — Timestamped filenames for discuss/create-plan outputs (`YYYY-MM-DD_HH-MM_<slug>.md`), matching handover-session. Enables chronological tracking across multiple same-day runs.
