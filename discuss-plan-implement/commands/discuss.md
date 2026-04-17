@@ -1,5 +1,5 @@
 ---
-description: "Bilateral alignment conversation for one story. Writes a discussion summary to docs/discussions/YYYY-MM-DD-<slug>.md. No code is written in this phase."
+description: "Bilateral alignment conversation for one story. Writes a discussion summary to docs/discussions/YYYY-MM-DD_HH-MM_<slug>.md. No code is written in this phase."
 model: opus
 ---
 
@@ -40,9 +40,12 @@ Surface each of these explicitly and get a human answer. Reading existing files 
 
 ## Output
 
-Write to `docs/discussions/YYYY-MM-DD-<slug>.md` where:
+Write to `docs/discussions/YYYY-MM-DD_HH-MM_<slug>.md` where:
 - `YYYY-MM-DD` is today's date.
-- `<slug>` is a kebab-case summary of the story (e.g., `add-jwt-auth`).
+- `HH-MM` is current local hour and minute (24h, hyphen-separated).
+- `<slug>` is a snake_case summary of the story (e.g., `add_jwt_auth`).
+
+Example: `2026-04-17_13-26_add_jwt_auth.md`.
 
 Create the `docs/discussions/` directory if it does not exist.
 
@@ -51,7 +54,7 @@ Create the `docs/discussions/` directory if it does not exist.
 ```markdown
 ---
 story: "<one-line story statement>"
-created: <YYYY-MM-DD>
+created: <YYYY-MM-DD HH:MM>
 ---
 
 # Discussion: <topic>
