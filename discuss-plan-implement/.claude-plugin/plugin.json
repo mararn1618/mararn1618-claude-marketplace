@@ -1,6 +1,6 @@
 {
   "name": "discuss-plan-implement",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Minimal discuss -> plan -> implement workflow for one story at a time. Phase C uses Claude Code Teams for parallel implementers and a clean-context advisor/fixer GAN verification loop.",
   "author": {
     "name": "Markus Arndt"
