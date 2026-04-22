@@ -1,0 +1,9 @@
+{
+  "name": "agent-kb",
+  "description": "Build agent-first knowledge bases from free-form sources. Scans paths in parallel, clusters into numbered domain folders, writes curated prose-first articles, generates CLAUDE.md + AGENTS.md routing files, and scrubs for sensitive data.",
+  "version": "0.1.0",
+  "author": {
+    "name": "mararn1618"
+  },
+  "repository": "https://github.com/mararn1618/mararn1618-claude-marketplace"
+}
