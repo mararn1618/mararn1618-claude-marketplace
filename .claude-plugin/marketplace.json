@@ -93,6 +93,12 @@
       "source": "./notes-like-markus",
       "description": "Voice reference for agent-produced notes. Writes fleeting notes, meeting alignments, ticket scratchpads, and daily summaries in a terse human voice instead of verbose AI prose.",
       "version": "0.2.0"
+    },
+    {
+      "name": "agent-kb",
+      "source": "./agent-kb",
+      "description": "Build agent-first knowledge bases from free-form sources. Scans paths in parallel, clusters into numbered domain folders, writes curated prose-first articles, generates CLAUDE.md + AGENTS.md routing files, and scrubs for sensitive data.",
+      "version": "0.1.0"
     }
   ]
 }
